@@ -53,6 +53,7 @@ Settings are stored in `%USERPROFILE%\.katos_interview_assistant\config.json`.
 - **OpenAI error**: verify API key and base URL.
 - **Ollama error**: ensure `ollama serve` is running and the model name is correct (`ollama list`).
 - **Recording doesn’t start**: check microphone permissions in Windows; for loopback, ensure the selected device is active and not muted.
+- ****My settings doesn't save after I quit the application and get back in**: I'm currently working on it. Patch will be soon. Until then, just don't quit the programm until you're done. 
 
 ## License
 
