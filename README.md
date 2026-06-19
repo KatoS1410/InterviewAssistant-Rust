@@ -1,6 +1,8 @@
 # KatoS Interview Assistant
 
 Voice‑assisted interview tool. Captures system audio or microphone, transcribes with VOSK, sends to OpenAI/Ollama, displays response.
+<img width="1023" height="720" alt="image" src="https://github.com/user-attachments/assets/76438b29-e079-4e15-82a9-9770fc06e2b3" />
+
 
 ## Features
 
