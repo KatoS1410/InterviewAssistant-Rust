@@ -1,102 +1,57 @@
 # KatoS Interview Assistant
 
-Помощник для технических собеседований. Записывает речь → распознаёт текст → отправляет в ИИ → показывает готовый ответ.
+Voice‑assisted interview tool. Captures system audio or microphone, transcribes with VOSK, sends to OpenAI/Ollama, displays response.
 
----
+## Features
 
-## Как запустить
+- Two input sources: loopback (desktop audio) and microphone.
+- VOSK speech‑to‑text (model loaded once, kept in memory).
+- AI backends: OpenAI (compatible APIs) and Ollama.
+- Global hotkeys (← / →) – press and hold to record, release to transcribe + get answer.
+- Conversation history (last 20 messages).
+- Custom system prompt with `{position}` placeholder.
 
-**Требования:** Python 3.9+ (скачать: https://python.org)
+## Requirements
 
-```bash
-python run.py
-```
+- Windows 10/11.
+- VOSK model (download from https://alphacephei.com/vosk/models).
+- For OpenAI: API key.
+- For Ollama: running server (`ollama serve`) and a pulled model.
 
-При первом запуске всё установится автоматически. Просто нажми Enter.
+## Installation
 
----
+### Pre‑built installer
+Download `KatoS_Interview_Assistant_Setup.exe` from Releases. Run and follow the wizard.
 
-## Настройка (один раз)
+### Build from source
+1. Install Python 3.9+, Inno Setup 6.
+2. Clone this repository.
+3. Run `python build_windows.py`.  
+   It installs dependencies, builds the `.exe` with PyInstaller, and compiles the installer into `installer_output/`.
 
-### 1. Модель VOSK (распознавание речи)
+## Usage
 
-1. Скачай модель: **https://alphacephei.com/vosk/models**
-   - `vosk-model-small-ru-0.22` — ~50 МБ, быстро, хуже качество
-   - `vosk-model-ru-0.42` — ~1.8 ГБ, **рекомендуется**
-2. Распакуй ZIP в любую папку
-3. В приложении: вкладка **Настройки** → укажи путь
+1. Launch the app.
+2. Go to **Settings**: set VOSK model path, choose AI backend, configure audio devices.
+3. On **Main** tab: enter your target position (e.g., "Backend Engineer").
+4. Click **"Загрузить модель"** – loads VOSK and initialises the AI session.
+5. Hold **←** (left arrow) to record system audio. Hold **→** (right arrow) to record from microphone.  
+   Release to stop – transcription and AI reply appear automatically.
 
-### 2. ИИ — выбери один вариант
+You can also edit the transcript and click **"Отправить вручную"** to send custom text to the AI.
 
-**Вариант A — OpenAI (платно, но просто):**
-- Получи ключ: https://platform.openai.com/api-keys
-- Вставь в поле "API ключ"
-- Модель: `gpt-4o-mini` (дёшево) или `gpt-4o` (лучше)
+## Configuration
 
-**Вариант B — Ollama (бесплатно, локально):**
-1. Установи: https://ollama.com/download
-2. Открой терминал: `ollama pull deepseek-r1:7b`
-3. Запусти сервер: `ollama serve`
-4. В приложении выбери "Ollama", URL: `http://localhost:11434`
+Settings are stored in `%USERPROFILE%\.katos_interview_assistant\config.json`.
 
----
+## Troubleshooting
 
-## Настройка системного звука (Windows)
+- **No loopback device**: enable Stereo Mix in Windows Sound settings (Recording tab) or install a virtual audio cable.
+- **VOSK model fails**: path must point to the extracted folder (contains `am`, `conf`, `graph`). Loading takes ~30 sec for large models.
+- **OpenAI error**: verify API key and base URL.
+- **Ollama error**: ensure `ollama serve` is running and the model name is correct (`ollama list`).
+- **Recording doesn’t start**: check microphone permissions in Windows; for loopback, ensure the selected device is active and not muted.
+- **My settings doesn't save after I quit the programm**: I know, I'm currently working on the patch. Just don't quit the program once you're fully loaded and done with your stuff.
+## License
 
-Чтобы записывать звук с экрана (Zoom, Teams, Meet):
-
-1. ПКМ на иконке звука → **Параметры звука**
-2. **Дополнительные параметры звука**
-3. Вкладка **Запись** → ПКМ → **Показать отключённые устройства**
-4. Правая кнопка на **Стерео Микшер** → **Включить**
-5. В приложении: Настройки → Аудио устройства → нажми **Обновить список**
-
-Если Стерео Микшер недоступен → установи VB-Cable: https://vb-audio.com/Cable/
-
----
-
-## Управление
-
-| Действие | Клавиша |
-|---|---|
-| Записать системный звук (вопрос интервьюера) | `←` держать |
-| Записать микрофон (свой голос) | `→` держать |
-| Остановить запись + отправить в ИИ | отпустить клавишу |
-
-**Клавиши работают глобально** — даже когда окно свёрнуто.
-
-Можно редактировать транскрипцию вручную и нажать **"Отправить вручную"**.
-
----
-
-## Флоу использования
-
-```
-python run.py
-  → Настройки: указать модель, API ключ, сохранить
-  → Главная: ввести должность ("Python Developer")
-  → Нажать "Загрузить модель" → ждать "Готово ✓"
-  → Во время собеседования:
-      удерживать ← пока интервьюер говорит
-      отпустить → ИИ генерирует ответ
-```
-
----
-
-## Где хранятся настройки
-
-`C:\Users\<ИМЯ>\.katos_interview_assistant\config.json`
-
-Файл можно открыть в блокноте и отредактировать вручную.
-
----
-
-## FAQ
-
-**Почему окно консоли скрывается?** — Нормально. Оно скрывается как только запустился интерфейс.
-
-**Модель VOSK грузится долго** — Большая модель (~1.8 ГБ) может грузиться 10-30 секунд. Это нормально. После загрузки работает мгновенно.
-
-**Ollama пишет ошибку** — Убедись что запустил `ollama serve` в терминале, и что модель скачана (`ollama list`).
-
-**Транскрипция неточная** — Используй большую модель (`vosk-model-ru-0.42`). Говори чётко, без фонового шума.
+MIT
