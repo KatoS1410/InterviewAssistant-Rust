@@ -12,6 +12,41 @@ use std::path::{Path, PathBuf};
 
 use libloading::{Library, Symbol};
 
+/// On Windows, add `dir` to the DLL search path so dependent DLLs
+/// (libstdc++-6.dll, libwinpthread-1.dll, libgcc_s_seh-1.dll) are found.
+#[cfg(windows)]
+fn add_dll_directory(dir: &Path) -> Option<*mut std::ffi::c_void> {
+    use std::os::windows::ffi::OsStrExt;
+    let wide: Vec<u16> = dir.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+    let cookie = unsafe {
+        windows_sys::Win32::System::LibraryLoader::AddDllDirectory(wide.as_ptr())
+    };
+    if cookie.is_null() {
+        None
+    } else {
+        Some(cookie)
+    }
+}
+
+#[cfg(not(windows))]
+fn add_dll_directory(_dir: &Path) -> Option<()> {
+    Some(())
+}
+
+/// Remove a previously added DLL directory.
+#[cfg(windows)]
+fn remove_dll_directory(cookie: Option<*mut std::ffi::c_void>) {
+    if let Some(c) = cookie {
+        unsafe {
+            windows_sys::Win32::System::LibraryLoader::RemoveDllDirectory(c);
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn remove_dll_directory(_cookie: Option<()>) {}
+
+
 /// Opaque VOSK model (loaded from model directory).
 #[repr(C)]
 pub struct VoskModel {
@@ -42,6 +77,9 @@ impl VoskDll {
     /// Load VOSK DLL. If not found locally, auto-downloads from GitHub.
     /// Searches in: model dir, parent dir, exe dir, cwd, whisper_model/.
     pub fn load(model_dir: &Path) -> Result<Self, String> {
+        // Add model dir to DLL search path so dependent DLLs are found.
+        let _cookie = add_dll_directory(model_dir);
+
         // First, try to find DLL locally.
         if let Ok(dll) = Self::try_load_local(model_dir) {
             return Ok(dll);
