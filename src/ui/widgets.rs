@@ -2,8 +2,7 @@ use egui::{Color32, Frame, Margin, RichText, Rounding, Stroke, Ui, Vec2};
 
 use crate::ui::theme::Theme;
 
-/// Стеклянная панель с закруглёнными углами и тонкой рамкой.
-/// Содержимое обрезается по границам панели (clip).
+/// Стеклянная панель с закруглёнными углами
 pub fn glass_panel(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
     Frame::none()
         .fill(Theme::GLASS)
@@ -16,10 +15,10 @@ pub fn glass_panel(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
         });
 }
 
-/// Заголовок секции — крупный, с акцентной линией слева.
+/// Заголовок секции
 pub fn section_heading(ui: &mut Ui, title: &str, hint: &str) {
     ui.horizontal(|ui| {
-        // Акцентная полоска слева.
+        // Акцентная полоска слева
         let (rect, _) = ui.allocate_exact_size(Vec2::new(3.0, 16.0), egui::Sense::hover());
         ui.painter().rect_filled(rect, Rounding::same(1.5), Theme::ACCENT);
         ui.add_space(6.0);
@@ -32,8 +31,7 @@ pub fn section_heading(ui: &mut Ui, title: &str, hint: &str) {
     ui.add_space(4.0);
 }
 
-/// Кнопка-пилюля: закруглённая, с акцентом при `accent=true`, красная при `danger=true`.
-/// Hover/active стиль задаётся глобальной темой (matrix-green).
+/// Кнопка-пилюля
 pub fn pill_button(ui: &mut Ui, label: &str, accent: bool, danger: bool) -> egui::Response {
     let (fill, text_color, stroke_color) = if danger {
         (Theme::DANGER_DIM, Color32::WHITE, Theme::DANGER)
@@ -52,7 +50,7 @@ pub fn pill_button(ui: &mut Ui, label: &str, accent: bool, danger: bool) -> egui
     )
 }
 
-/// ComboBox с меткой слева.
+/// ComboBox с меткой
 pub fn labeled_combo(ui: &mut Ui, label: &str, value: &mut String, options: &[String]) {
     ui.horizontal(|ui| {
         ui.label(RichText::new(label).color(Theme::TEXT_DIM));
@@ -67,7 +65,7 @@ pub fn labeled_combo(ui: &mut Ui, label: &str, value: &mut String, options: &[St
     });
 }
 
-/// Многострочное текстовое поле с моноширинным шрифтом и тёмным фоном.
+/// Многострочное текстовое поле
 pub fn copyable_text_edit(ui: &mut Ui, id: &str, text: &mut String, rows: usize) {
     let mut content = text.clone();
     let response = ui.add(
@@ -83,7 +81,7 @@ pub fn copyable_text_edit(ui: &mut Ui, id: &str, text: &mut String, rows: usize)
     }
 }
 
-/// Статус-бар внизу окна.
+/// Статус-бар
 pub fn status_bar(ui: &mut Ui, status: &str, ai_info: &str, vosk_info: &str) {
     ui.separator();
     ui.horizontal(|ui| {
