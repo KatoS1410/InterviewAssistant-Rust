@@ -4,20 +4,22 @@ use crate::ui::widgets::{glass_panel, pill_button, section_heading};
 use egui::RichText;
 
 pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
+    let available = ui.available_size();
     ui.columns(2, |cols| {
         // Левая колонка: история вопросов
         cols[0].vertical(|ui| {
+            ui.set_max_width(available.x / 2.0 - 6.0);
+            ui.set_max_height(available.y);
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("history.questions"), "");
-                ui.add_space(2.0);
                 egui::ScrollArea::vertical()
                     .id_salt("history_question_scroll")
-                    .max_height(ui.available_height() - 50.0)
+                    .max_height(ui.available_height() - 44.0)
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         render_history_text(ui, &app.history_questions, false);
                     });
-                ui.horizontal(|ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if pill_button(ui, app.t("history.clear"), false, false).clicked() {
                         app.history_questions.clear();
                         app.history_answers.clear();
@@ -28,17 +30,18 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
 
         // Правая колонка: история ответов (ошибки красным)
         cols[1].vertical(|ui| {
+            ui.set_max_width(available.x / 2.0 - 6.0);
+            ui.set_max_height(available.y);
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("history.answers"), "");
-                ui.add_space(2.0);
                 egui::ScrollArea::vertical()
                     .id_salt("history_answer_scroll")
-                    .max_height(ui.available_height() - 50.0)
+                    .max_height(ui.available_height() - 44.0)
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         render_history_text(ui, &app.history_answers, true);
                     });
-                ui.horizontal(|ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if pill_button(ui, app.t("history.clear"), false, false).clicked() {
                         app.history_questions.clear();
                         app.history_answers.clear();

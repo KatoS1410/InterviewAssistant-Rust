@@ -92,98 +92,86 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     ui.add_space(6.0);
 
     // Два окна рядом: слева — живая речь/вопрос, справа — ответ AI.
-    let available_height = ui.available_height();
+    // Используем columns, но ограничиваем ширину внутри каждой колонки.
+    let available = ui.available_size();
     ui.columns(2, |cols| {
-        // Левое окно: распознанная речь / вопрос (редактируемое).
+        // Левое окно: распознанная речь / вопрос.
         cols[0].vertical(|ui| {
-            let panel_height = available_height;
-            ui.allocate_ui_with_layout(
-                egui::vec2(ui.available_width(), panel_height),
-                egui::Layout::top_down(egui::Align::Min),
-                |ui| {
-                    glass_panel(ui, |ui| {
-                        section_heading(ui, app.t("main.transcript"), &app.transcript_hint);
-                        ui.add_space(2.0);
-                        egui::ScrollArea::vertical()
-                            .id_salt("transcript_scroll")
-                            .max_height(ui.available_height() - 50.0)
-                            .auto_shrink([false; 2])
-                            .stick_to_bottom(true)
-                            .show(ui, |ui| {
-                                ui.add(
-                                    egui::TextEdit::multiline(&mut app.transcript)
-                                        .id_salt("transcript")
-                                        .desired_width(f32::INFINITY)
-                                        .font(egui::TextStyle::Monospace),
-                                );
-                            });
-                        ui.horizontal(|ui| {
-                            if pill_button(ui, app.t("main.clear"), false, false).clicked() {
-                                app.transcript.clear();
-                                app.question.clear();
-                            }
-                            if pill_button(ui, app.t("main.ask"), true, false).clicked() {
-                                app.question = app.transcript.clone();
-                                app.ask_ai();
-                            }
-                        });
+            ui.set_max_width(available.x / 2.0 - 6.0);
+            ui.set_max_height(available.y);
+            glass_panel(ui, |ui| {
+                section_heading(ui, app.t("main.transcript"), &app.transcript_hint);
+                egui::ScrollArea::vertical()
+                    .id_salt("transcript_scroll")
+                    .max_height(ui.available_height() - 44.0)
+                    .auto_shrink([false; 2])
+                    .stick_to_bottom(true)
+                    .show(ui, |ui| {
+                        ui.add(
+                            egui::TextEdit::multiline(&mut app.transcript)
+                                .id_salt("transcript")
+                                .desired_width(f32::INFINITY)
+                                .font(egui::TextStyle::Monospace),
+                        );
                     });
-                },
-            );
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if pill_button(ui, app.t("main.ask"), true, false).clicked() {
+                        app.question = app.transcript.clone();
+                        app.ask_ai();
+                    }
+                    if pill_button(ui, app.t("main.clear"), false, false).clicked() {
+                        app.transcript.clear();
+                        app.question.clear();
+                    }
+                });
+            });
         });
 
         // Правое окно: ответ AI.
         cols[1].vertical(|ui| {
-            let panel_height = available_height;
-            ui.allocate_ui_with_layout(
-                egui::vec2(ui.available_width(), panel_height),
-                egui::Layout::top_down(egui::Align::Min),
-                |ui| {
-                    glass_panel(ui, |ui| {
-                        section_heading(ui, app.t("main.answer"), "");
-                        ui.add_space(2.0);
-                        egui::ScrollArea::vertical()
-                            .id_salt("answer_scroll")
-                            .max_height(ui.available_height() - 50.0)
-                            .auto_shrink([false; 2])
-                            .show(ui, |ui| {
-                                ui.add(
-                                    egui::TextEdit::multiline(&mut app.answer)
-                                        .id_salt("answer")
-                                        .desired_width(f32::INFINITY)
-                                        .font(egui::TextStyle::Monospace),
-                                );
-                            });
-                        ui.horizontal(|ui| {
-                            if pill_button(ui, app.t("main.clear"), false, false).clicked() {
-                                app.answer.clear();
-                            }
-                            if pill_button(ui, app.t("main.prev_answer"), false, false).clicked() {
-                                if !app.prev_answer.is_empty() && !app.prev_answer.starts_with("Ошибка AI:") {
-                                    app.answer = app.prev_answer.clone();
-                                    app.transcript = app.prev_question.clone();
-                                    app.question = app.prev_question.clone();
-                                    app.set_status("Восстановлен предыдущий вопрос и ответ");
-                                } else if app.prev_answer.starts_with("Ошибка AI:") {
-                                    app.set_status("Предыдущий ответ был ошибочным, не восстанавливаем");
-                                } else {
-                                    app.set_status("Нет предыдущего ответа");
-                                }
-                            }
-                        });
-
-                        // Показываем последнюю ошибку AI (не затирает успешный ответ).
-                        if !app.last_error.is_empty() {
-                            ui.add_space(4.0);
-                            ui.label(
-                                egui::RichText::new(&app.last_error)
-                                    .size(11.0)
-                                    .color(crate::ui::theme::Theme::DANGER),
-                            );
-                        }
+            ui.set_max_width(available.x / 2.0 - 6.0);
+            ui.set_max_height(available.y);
+            glass_panel(ui, |ui| {
+                section_heading(ui, app.t("main.answer"), "");
+                egui::ScrollArea::vertical()
+                    .id_salt("answer_scroll")
+                    .max_height(ui.available_height() - 44.0)
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        ui.add(
+                            egui::TextEdit::multiline(&mut app.answer)
+                                .id_salt("answer")
+                                .desired_width(f32::INFINITY)
+                                .font(egui::TextStyle::Monospace),
+                        );
                     });
-                },
-            );
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if pill_button(ui, app.t("main.prev_answer"), false, false).clicked() {
+                        if !app.prev_answer.is_empty() && !app.prev_answer.starts_with("Ошибка AI:") {
+                            app.answer = app.prev_answer.clone();
+                            app.transcript = app.prev_question.clone();
+                            app.question = app.prev_question.clone();
+                            app.set_status("Восстановлен предыдущий вопрос и ответ");
+                        } else if app.prev_answer.starts_with("Ошибка AI:") {
+                            app.set_status("Предыдущий ответ был ошибочным, не восстанавливаем");
+                        } else {
+                            app.set_status("Нет предыдущего ответа");
+                        }
+                    }
+                    if pill_button(ui, app.t("main.clear"), false, false).clicked() {
+                        app.answer.clear();
+                    }
+                });
+
+                if !app.last_error.is_empty() {
+                    ui.add_space(4.0);
+                    ui.label(
+                        egui::RichText::new(&app.last_error)
+                            .size(11.0)
+                            .color(crate::ui::theme::Theme::DANGER),
+                    );
+                }
+            });
         });
     });
 }

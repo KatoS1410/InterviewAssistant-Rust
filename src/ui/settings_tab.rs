@@ -10,10 +10,11 @@ use crate::ui::widgets::{
 use egui::RichText;
 
 pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
-    ui.spacing_mut().item_spacing.x = 12.0;
+    let available = ui.available_size();
     ui.columns(2, |cols| {
         // === Колонка 0 ===
         cols[0].vertical(|ui| {
+            ui.set_max_width(available.x / 2.0 - 6.0);
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("settings.ai_provider"), "");
                 let providers: Vec<String> = PROVIDERS.iter().map(|(p, _, _)| (*p).into()).collect();
@@ -23,44 +24,50 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                     app.cfg.apply_provider_preset(&app.cfg.provider.clone());
                 }
 
-                ui.end_row();
+                ui.add_space(4.0);
+
                 match app.cfg.provider.to_lowercase().as_str() {
                     "gigachat" => {
-                        ui.label(RichText::new(app.t("settings.auth_key")).color(Theme::TEXT_DIM));
-                        ui.add(
-                            egui::TextEdit::singleline(&mut app.cfg.gigachat_auth_key)
-                                .password(true)
-                                .desired_width(ui.available_width()),
-                        );
-                        ui.end_row();
-
-                        ui.label(RichText::new(app.t("settings.scope")).color(Theme::TEXT_DIM));
-                        ui.text_edit_singleline(&mut app.cfg.gigachat_scope);
-                        ui.end_row();
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(app.t("settings.auth_key")).color(Theme::TEXT_DIM));
+                            ui.add(
+                                egui::TextEdit::singleline(&mut app.cfg.gigachat_auth_key)
+                                    .password(true)
+                                    .desired_width(ui.available_width()),
+                            );
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(app.t("settings.scope")).color(Theme::TEXT_DIM));
+                            ui.text_edit_singleline(&mut app.cfg.gigachat_scope);
+                        });
                     }
                     "local llms" => {
-                        ui.label(RichText::new(app.t("settings.address")).color(Theme::TEXT_DIM));
-                        ui.text_edit_singleline(&mut app.cfg.local_llm_address);
-                        ui.end_row();
-
-                        ui.label(RichText::new(app.t("settings.port")).color(Theme::TEXT_DIM));
-                        ui.add(egui::DragValue::new(&mut app.cfg.local_llm_port).speed(1.0));
-                        ui.end_row();
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(app.t("settings.address")).color(Theme::TEXT_DIM));
+                            ui.text_edit_singleline(&mut app.cfg.local_llm_address);
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(app.t("settings.port")).color(Theme::TEXT_DIM));
+                            ui.add(egui::DragValue::new(&mut app.cfg.local_llm_port).speed(1.0));
+                        });
                     }
                     _ => {
-                        ui.label(RichText::new(app.t("settings.api_key")).color(Theme::TEXT_DIM));
-                        ui.add(
-                            egui::TextEdit::singleline(&mut app.cfg.api_key)
-                                .password(true)
-                                .desired_width(ui.available_width()),
-                        );
-                        ui.end_row();
-
-                        ui.label(RichText::new(app.t("settings.base_url")).color(Theme::TEXT_DIM));
-                        ui.text_edit_singleline(&mut app.cfg.base_url);
-                        ui.end_row();
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(app.t("settings.api_key")).color(Theme::TEXT_DIM));
+                            ui.add(
+                                egui::TextEdit::singleline(&mut app.cfg.api_key)
+                                    .password(true)
+                                    .desired_width(ui.available_width()),
+                            );
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(app.t("settings.base_url")).color(Theme::TEXT_DIM));
+                            ui.text_edit_singleline(&mut app.cfg.base_url);
+                        });
                     }
                 }
+
+                ui.add_space(2.0);
 
                 ui.horizontal(|ui| {
                     ui.label(RichText::new(app.t("settings.model")).color(Theme::TEXT_DIM));
@@ -85,6 +92,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
 
         // === Колонка 1 ===
         cols[1].vertical(|ui| {
+            ui.set_max_width(available.x / 2.0 - 6.0);
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("settings.vosk_audio"), "");
                 ui.horizontal(|ui| {

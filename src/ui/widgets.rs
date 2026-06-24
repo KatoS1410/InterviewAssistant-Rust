@@ -31,6 +31,7 @@ pub fn section_heading(ui: &mut Ui, title: &str, hint: &str) {
 }
 
 /// Кнопка-пилюля: закруглённая, с акцентом при `accent=true`, красная при `danger=true`.
+/// Приятный стиль: мягкие скругления, hover-подсветка.
 pub fn pill_button(ui: &mut Ui, label: &str, accent: bool, danger: bool) -> egui::Response {
     let (fill, text_color, stroke_color) = if danger {
         (Theme::DANGER_DIM, Color32::WHITE, Theme::DANGER)
@@ -40,13 +41,24 @@ pub fn pill_button(ui: &mut Ui, label: &str, accent: bool, danger: bool) -> egui
         (Theme::PANEL_DARK, Theme::TEXT, Theme::BORDER_STRONG)
     };
 
-    let button = egui::Button::new(RichText::new(label).color(text_color).size(12.0))
+    let button = egui::Button::new(RichText::new(label).color(text_color).size(13.0))
         .fill(fill)
-        .stroke(Stroke::new(1.2, stroke_color))
-        .rounding(Rounding::same(20.0))
-        .min_size(Vec2::new(40.0, 28.0));
+        .stroke(Stroke::new(1.5, stroke_color))
+        .rounding(Rounding::same(22.0))
+        .min_size(Vec2::new(44.0, 32.0));
 
-    ui.add(button)
+    let response = ui.add(button);
+
+    // Hover glow — лёгкое белое свечение вокруг кнопки.
+    if response.hovered() {
+        ui.painter().rect_filled(
+            response.rect.expand(2.0),
+            Rounding::same(24.0),
+            Color32::from_rgba_premultiplied(255, 255, 255, 8),
+        );
+    }
+
+    response
 }
 
 /// ComboBox с меткой слева.
