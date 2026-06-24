@@ -12,6 +12,7 @@ assistant/
 run.sh
 run.bat
 *.exe
+!/interview-assistant.exe
 *.zip
 *.tar.gz
 *.log
