@@ -50,9 +50,34 @@ fn load_library_with_deps(path: &Path) -> Result<Library, String> {
     }
     #[cfg(not(windows))]
     {
-        unsafe {
+        // On Linux/macOS, dlopen searches for dependent .so in LD_LIBRARY_PATH,
+        // RPATH, and system paths — but NOT in the loaded library's directory.
+        // Temporarily prepend the library's directory to LD_LIBRARY_PATH
+        // so that bundled dependencies (e.g., libvosk.so's dependencies) are found.
+        let lib_dir = path
+            .parent()
+            .and_then(|p| p.to_str())
+            .unwrap_or(".");
+        let old_ld_path = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
+        let new_ld_path = if old_ld_path.is_empty() {
+            lib_dir.to_string()
+        } else {
+            format!("{}:{}", lib_dir, old_ld_path)
+        };
+        std::env::set_var("LD_LIBRARY_PATH", &new_ld_path);
+
+        let result = unsafe {
             Library::new(path).map_err(|e| format!("Library::new failed: {e}"))
+        };
+
+        // Restore original LD_LIBRARY_PATH.
+        if old_ld_path.is_empty() {
+            std::env::remove_var("LD_LIBRARY_PATH");
+        } else {
+            std::env::set_var("LD_LIBRARY_PATH", &old_ld_path);
         }
+
+        result
     }
 }
 
