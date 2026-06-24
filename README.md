@@ -22,6 +22,9 @@ Hold a hotkey, speak, release — the app transcribes your speech and sends it t
 
 ### Quick Start (Windows)
 
+Windows fast installation by .exe: go [here](https://github.com/KatoS1410/InterviewAssistant-Python/releases/tag/v.1.1-rust)
+
+Windows manual installation:
 1. **Install Rust** (if not already): https://rustup.rs
 2. **Download a VOSK model**:
    - Russian: [vosk-model-ru-0.10](https://alphacephei.com/vosk/models/vosk-model-ru-0.10.zip) (~1.4 GB)
@@ -146,6 +149,9 @@ src/
 
 ### Быстрый старт (Windows)
 
+Установка на Windows с помощью простого .exe: вам [сюда](https://github.com/KatoS1410/InterviewAssistant-Python/releases/tag/v.1.1-rust)
+
+Установка на Windows вручную:
 1. **Установи Rust** (если ещё нет): https://rustup.rs
 2. **Скачай VOSK модель**:
    - Русская: [vosk-model-ru-0.10](https://alphacephei.com/vosk/models/vosk-model-ru-0.10.zip) (~1.4 GB)
