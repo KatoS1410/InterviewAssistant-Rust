@@ -111,9 +111,9 @@ impl InterviewApp {
             logs: String::new(),
             history_questions: String::new(),
             history_answers: String::new(),
-            status: "[<-] loopback  [->] mic".into(),
-            transcript_hint: "Live speech stream".into(),
-            vosk_status: "not loaded".into(),
+            status: locale::t(lang, "header.hint").to_string(),
+            transcript_hint: locale::t(lang, "main.live_speech").to_string(),
+            vosk_status: locale::t(lang, "vosk.not_loaded").to_string(),
             config_preview: serde_json::to_string_pretty(&cfg).unwrap_or_default(),
             chunk_ms_text,
             auto_ask_text,
@@ -182,7 +182,7 @@ impl InterviewApp {
                 self.cfg.mic_device = dev.name;
             }
         }
-        self.set_status(&format!("Устройств: {}", self.device_names.len()));
+        self.set_status(&format!("{} {}", self.t("status.devices"), self.device_names.len()));
         self.log(&format!("Devices refreshed: {}", self.device_names.len()));
         self.refresh_config_preview();
     }
@@ -190,10 +190,10 @@ impl InterviewApp {
     pub fn detect_loopback(&mut self) {
         if let Some(dev) = crate::core::find_loopback_device() {
             self.cfg.loopback_device = dev.name.clone();
-            self.set_status("Loopback найден");
+            self.set_status(self.t("misc.loopback_found"));
             self.log(&format!("Loopback: {}", dev.name));
         } else {
-            self.set_status("Loopback не найден");
+            self.set_status(self.t("misc.loopback_not_found"));
             self.log("Loopback not found");
         }
     }
@@ -201,10 +201,10 @@ impl InterviewApp {
     pub fn detect_mic(&mut self) {
         if let Some(dev) = crate::core::find_mic_device() {
             self.cfg.mic_device = dev.name.clone();
-            self.set_status("Микрофон найден");
+            self.set_status(self.t("misc.mic_found"));
             self.log(&format!("Mic: {}", dev.name));
         } else {
-            self.set_status("Микрофон не найден");
+            self.set_status(self.t("misc.mic_not_found"));
             self.log("Mic not found");
         }
     }
@@ -266,7 +266,7 @@ impl InterviewApp {
     pub fn load_vosk(&mut self) {
         let path = self.cfg.vosk_model_path.clone();
         if path.is_empty() {
-            self.vosk_status = "no model path".into();
+            self.vosk_status = self.t("vosk.no_path").to_string();
             self.log("VOSK: no model path configured");
             return;
         }
@@ -279,7 +279,7 @@ impl InterviewApp {
             return;
         }
         let tx = self.transcript_tx.clone();
-        self.vosk_status = "loading...".into();
+        self.vosk_status = self.t("vosk.loading").to_string();
         self.transcriber.load_async(PathBuf::from(&path), tx);
         self.log(&format!("VOSK load started: {path}"));
     }
@@ -319,18 +319,18 @@ impl InterviewApp {
         }
         let q = self.question.trim().to_string();
         if q.is_empty() {
-            self.set_status("Нет текста для AI");
+            self.set_status(self.t("main.no_text"));
             return;
         }
         // Сохраняем предыдущий вопрос и ответ для кнопок истории.
         if self.prev_question != q {
             self.prev_question = self.question.clone();
         }
-        if !self.answer.is_empty() && self.answer != "Думаю..." {
+        if !self.answer.is_empty() && self.answer != self.t("main.thinking") {
             self.prev_answer = self.answer.clone();
         }
         self.save_config();
-        self.answer = "Думаю...".into();
+        self.answer = self.t("main.thinking").to_string();
         self.ai_busy = true;
         self.ai_request_time = Some(Instant::now());
         spawn_ai_request(
@@ -339,7 +339,7 @@ impl InterviewApp {
             q,
             self.ai_tx.clone(),
         );
-        self.set_status("Запрос к AI...");
+        self.set_status(self.t("main.ai_request"));
         self.log("AI request started");
     }
 
@@ -349,8 +349,8 @@ impl InterviewApp {
         }
         // Проверяем, что VOSK загружен.
         if !self.transcriber.is_loaded() && !self.transcriber.is_loading() {
-            self.big_status = "VOSK не подключен! Распознавание невозможно.".into();
-            self.set_status("Ошибка: VOSK не загружен");
+            self.big_status = self.t("main.vosk_not_loaded").to_string();
+            self.set_status(self.t("status.recording_blocked"));
             self.log("Recording blocked: VOSK not loaded");
             return;
         }
@@ -376,10 +376,10 @@ impl InterviewApp {
                 self.recording = true;
                 self.record_mode = Some(mode);
                 self.transcript_hint = match mode {
-                    AudioMode::Loopback => "Источник: LOOPBACK".into(),
-                    AudioMode::Mic => "Источник: MIC".into(),
+                    AudioMode::Loopback => self.t("main.source_loopback").to_string(),
+                    AudioMode::Mic => self.t("main.source_mic").to_string(),
                 };
-                self.set_status("Запись...");
+                self.set_status(self.t("main.recording"));
                 self.log(&format!("Recording started: {mode:?} ({device})"));
             }
             Err(err) => {
@@ -400,7 +400,7 @@ impl InterviewApp {
         self.recording = false;
         self.stopping = true;
 
-        self.set_status("Остановка записи... (сбор хвоста)");
+        self.set_status(self.t("main.stopping"));
         self.log("Recording stop signalled");
     }
 
@@ -424,7 +424,7 @@ impl InterviewApp {
                 self.log(&msg);
             }
             TranscriptEvent::Error(msg) => {
-                self.vosk_status = "error".into();
+                self.vosk_status = self.t("vosk.error").to_string();
                 self.big_status.clear();
                 self.log(&msg);
             }
@@ -456,9 +456,9 @@ impl InterviewApp {
             self.audio_buffer.clear();
 
             self.record_mode = None;
-            self.transcript_hint = "Live speech stream".into();
-            self.big_status = "Запись остановлена, распознавание...".into();
-            self.set_status("Запись остановлена, распознавание...");
+            self.transcript_hint = self.t("main.live_speech").to_string();
+            self.big_status = self.t("main.stopped").to_string();
+            self.set_status(self.t("main.stopped"));
             self.log("Recording stopped (tail collected)");
 
             // Wait for final transcript, then auto-ask AI.
@@ -474,8 +474,8 @@ impl InterviewApp {
         while let Ok(event) = self.transcript_rx.try_recv() {
             self.apply_transcript_event(event);
         }
-        if self.transcriber.is_loaded() && !self.transcriber.is_loading() && self.vosk_status != "ready" {
-            self.vosk_status = "ready".into();
+        if self.transcriber.is_loaded() && !self.transcriber.is_loading() && self.vosk_status != self.t("vosk.ready") {
+            self.vosk_status = self.t("vosk.ready").to_string();
         }
 
         while let Ok(event) = self.ai_rx.try_recv() {
@@ -496,7 +496,7 @@ impl InterviewApp {
                     }
                     self.answer = text;
                     self.big_status.clear();
-                    self.set_status("Ответ получен");
+                    self.set_status(self.t("main.ai_response"));
                     self.log("AI request completed");
                 }
                 AiEvent::Error(err) => {
@@ -513,9 +513,9 @@ impl InterviewApp {
                     self.history_answers.push_str(&format!("[ОШИБКА] {err}"));
                     // НЕ затираем answer — сохраняем последний успешный ответ.
                     // Ошибку показываем в last_error (под правым окном).
-                    self.last_error = format!("Ошибка AI: {err}");
+                    self.last_error = format!("{}: {err}", self.t("main.ai_error"));
                     self.big_status.clear();
-                    self.set_status("Ошибка AI");
+                    self.set_status(self.t("main.ai_error"));
                     self.log(&format!("AI error: {err}"));
                 }
             }
@@ -527,9 +527,8 @@ impl InterviewApp {
         if self.ai_busy {
             if let Some(start) = self.ai_request_time {
                 if start.elapsed() >= Duration::from_secs(5) {
-                    self.big_status =
-                        "Нет ответа от ИИ, проверьте доступность модели".into();
-                    self.set_status("Таймаут AI");
+                    self.big_status = self.t("main.no_answer").to_string();
+                    self.set_status(self.t("main.ai_timeout"));
                 }
             }
         }

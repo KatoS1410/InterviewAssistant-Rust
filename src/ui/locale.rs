@@ -125,6 +125,8 @@ static LOCALE: phf::Map<&'static str, (&'static str, &'static str)> = phf::phf_m
 
     // --- Status bar ---
     "status.devices" => ("Устройств:", "Devices:"),
+    "status.devices_count" => ("Устройств: {}", "Devices: {}"),
+    "status.recording_blocked" => ("Ошибка: VOSK не загружен", "Error: VOSK not loaded"),
     "status.ai" => ("AI:", "AI:"),
     "status.vosk" => ("VOSK:", "VOSK:"),
     "status.hz" => ("Hz", "Hz"),
