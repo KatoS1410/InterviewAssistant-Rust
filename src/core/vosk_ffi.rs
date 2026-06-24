@@ -47,9 +47,8 @@ impl VoskDll {
             return Ok(dll);
         }
 
-        // DLL not found — auto-download to parent directory (where we extract to).
-        let parent = model_dir.parent().unwrap_or(model_dir);
-        let target = parent.join("vosk.dll");
+        // DLL not found — auto-download to model directory.
+        let target = model_dir.join("vosk.dll");
         match ensure_vosk_dll(&target) {
             Ok(path) => {
                 let lib = unsafe {

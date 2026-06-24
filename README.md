@@ -36,7 +36,7 @@ Hold a hotkey, speak, release — the app transcribes your speech and sends it t
    cargo build --release
    .\target\release\interview-assistant.exe
    ```
-5. **First launch**: go to Settings tab → click "Browse" next to VOSK model path → select the model folder → click "Reload VOSK"
+5. **First launch**: go to Settings tab → click "Browse" next to VOSK model path → select the model folder → click "Load VOSK" (DLL downloads automatically)
 6. **Configure AI**: in Settings, set your API key, model, and endpoint
 7. **Set up audio devices**: click "Detect Loopback" and "Detect Mic", or select manually
 
@@ -66,7 +66,7 @@ cargo build --release
 sudo cp target/release/interview-assistant /usr/local/bin/
 ```
 
-After installation, download a VOSK model, extract it, and set the path in the app's Settings tab.
+After installation, download a VOSK model, extract it, set the path in Settings, and click "Load VOSK" — the DLL downloads automatically.
 
 ### Hotkeys
 
@@ -191,7 +191,7 @@ src/
    cargo build --release
    .\target\release\interview-assistant.exe
    ```
-5. **Первый запуск**: вкладка «Настройки» → нажми «Обзор» рядом с путём к VOSK модели → выбери папку с моделью → нажми «Перезагрузить VOSK»
+5. **Первый запуск**: вкладка «Настройки» → нажми «Обзор» рядом с путём к VOSK модели → выбери папку с моделью → нажми «Загрузить VOSK» (DLL скачается автоматически)
 6. **Настрой AI**: во вкладке «Настройки» укажи API ключ, модель и endpoint
 7. **Настрой аудиоустройства**: нажми «Найти Loopback» и «Найти микрофон», или выбери вручную
 

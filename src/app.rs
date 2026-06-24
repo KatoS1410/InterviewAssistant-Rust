@@ -265,14 +265,13 @@ impl InterviewApp {
         self.log(&format!("VOSK load started: {path}"));
     }
 
-    /// Выбор папки с VOSK моделью через диалог.
+    /// Выбор папки с VOSK моделью через диалог (только устанавливает путь).
     pub fn browse_vosk_model(&mut self) {
         if let Some(dir) = rfd::FileDialog::new().pick_folder() {
             self.cfg.vosk_model_path = dir.display().to_string();
             self.refresh_config_preview();
             self.save_config();
             self.log(&format!("VOSK model path set: {}", self.cfg.vosk_model_path));
-            self.load_vosk();
         }
     }
 

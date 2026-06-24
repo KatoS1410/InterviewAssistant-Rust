@@ -126,7 +126,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                         .color(Theme::TEXT_FAINT),
                 );
                 ui.label(
-                    RichText::new("vosk.dll должен лежать в той же папке, что и модель.")
+                    RichText::new("DLL скачается автоматически при загрузке модели.")
                         .size(10.0)
                         .color(Theme::TEXT_FAINT),
                 );
