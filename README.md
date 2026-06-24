@@ -96,7 +96,7 @@ sudo cp target/release/interview-assistant /usr/local/bin/
 - Rust 1.75+
 - VOSK model (~1.5 GB, separate download)
 - Loopback device for system audio (optional)
-- Internet only for AI (STT is fully offline)
+- Internet only for AI (STT is fully offline, but you can use Ollama as well)
 
 ---
 
@@ -185,4 +185,4 @@ sudo cp target/release/interview-assistant /usr/local/bin/
 - Rust 1.75+
 - VOSK модель (~1.5 GB, скачивается отдельно)
 - Loopback-устройство для системного звука (опционально)
-- Интернет только для AI (STT работает полностью офлайн)
+- Интернет только для AI (STT работает полностью офлайн, но для полного оффлайна можете использовать Ollama)
