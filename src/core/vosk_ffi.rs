@@ -298,7 +298,7 @@ fn ensure_vosk_dll(target: &Path) -> Result<PathBuf, String> {
         .map_err(|e| format!("Read zip failed: {e}"))?;
 
     let parent = target.parent().unwrap_or_else(|| Path::new("."));
-    let mut found = false;
+    let mut found_dll: Option<PathBuf> = None;
 
     for i in 0..archive.len() {
         let mut entry = archive
@@ -306,7 +306,7 @@ fn ensure_vosk_dll(target: &Path) -> Result<PathBuf, String> {
             .map_err(|e| format!("Zip entry {i}: {e}"))?;
         let name = entry.name().to_lowercase();
 
-        // Extract vosk.dll and its dependencies (ggml.dll etc.)
+        // Extract vosk.dll / libvosk.dll and its dependencies.
         if name.ends_with(".dll") {
             let fname = Path::new(entry.name())
                 .file_name()
@@ -322,8 +322,8 @@ fn ensure_vosk_dll(target: &Path) -> Result<PathBuf, String> {
             io::copy(&mut entry, &mut out)
                 .map_err(|e| format!("Extract {fname}: {e}"))?;
             eprintln!("[VOSK] Extracted: {fname}");
-            if fname.eq_ignore_ascii_case("vosk.dll") {
-                found = true;
+            if fname.eq_ignore_ascii_case("vosk.dll") || fname.eq_ignore_ascii_case("libvosk.dll") {
+                found_dll = Some(out_path);
             }
         }
     }
@@ -331,9 +331,8 @@ fn ensure_vosk_dll(target: &Path) -> Result<PathBuf, String> {
     // Clean up temp zip.
     let _ = std::fs::remove_file(&tmp_zip);
 
-    if !found {
-        return Err("vosk.dll not found in downloaded archive".into());
+    match found_dll {
+        Some(path) => Ok(path),
+        None => Err("vosk.dll / libvosk.dll not found in downloaded archive".into()),
     }
-
-    Ok(target.to_path_buf())
 }
