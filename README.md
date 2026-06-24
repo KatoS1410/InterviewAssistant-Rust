@@ -107,6 +107,7 @@ Key settings:
 - `loopback_device` / `mic_device` — audio device names
 - `chunk_ms` — audio chunk size in ms (default: 500)
 - `auto_ask_sec` — auto-send to AI after N seconds of silence (0 = disabled)
+- `tail_ms` — delay after stop to collect loopback tail audio (default: 6000, increase if audio is cut off at the end)
 
 ### Build from Source
 
@@ -262,6 +263,7 @@ sudo cp target/release/interview-assistant /usr/local/bin/
 - `loopback_device` / `mic_device` — названия аудиоустройств
 - `chunk_ms` — размер аудио-чанка в мс (по умолчанию: 500)
 - `auto_ask_sec` — автоотправка в AI через N секунд тишины (0 = выключено)
+- `tail_ms` — задержка после остановки для сбора хвоста loopback (по умолчанию: 6000, увеличьте если конец аудио обрезается)
 
 ### Сборка из исходников
 
@@ -324,6 +326,15 @@ src/
 
 ### Релизы
 
-Готовые `.exe` файлы доступны в [Releases](https://github.com/KatoS1410/InterviewAssistant-Python/releases).
+Готовые `.exe` и `.deb` файлы доступны в [Releases](https://github.com/KatoS1410/InterviewAssistant-Python/releases).
 
-Для запуска готового `.exe` всё равно нужна VOSK модель — скачай и распакуй её отдельно (см. «Быстрый старт»).
+**Актуальная версия:** v1.0.1-rust (Rust + egui + VOSK)
+
+Для запуска готового `.exe` всё равно нужна VOSK модель — скачай и распакуй её отдельно (см. «Быстрый старт»). VOSK DLL скачивается автоматически при первой загрузке модели.
+
+### Changelog (v1.0.1)
+
+- **VOSK DLL auto-download** — приложение само скачивает `vosk.dll` из GitHub Releases при загрузке модели
+- **DLL dependency fix** — на Windows используется `LoadLibraryExW` с `LOAD_WITH_ALTERED_SEARCH_PATH`, на Linux временно устанавливается `LD_LIBRARY_PATH` — зависимые DLL/SO находятся корректно
+- **Configurable tail_ms** — задержка сбора хвоста loopback настраивается в UI (Настройки → VOSK/Аудио → Tail ms), больше не жёсткие 6 секунд
+- **UI improvements** — поле Tail ms в настройках, улучшенные подсказки
