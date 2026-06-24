@@ -8,7 +8,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
         // Левая колонка: история вопросов
         cols[0].vertical(|ui| {
             glass_panel(ui, |ui| {
-                section_heading(ui, "Вопросы", "");
+                section_heading(ui, app.t("history.questions"), "");
                 ui.add_space(2.0);
                 egui::ScrollArea::vertical()
                     .id_salt("history_question_scroll")
@@ -18,7 +18,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                         render_history_text(ui, &app.history_questions, false);
                     });
                 ui.horizontal(|ui| {
-                    if pill_button(ui, "Очистить", false, false).clicked() {
+                    if pill_button(ui, app.t("history.clear"), false, false).clicked() {
                         app.history_questions.clear();
                         app.history_answers.clear();
                     }
@@ -29,7 +29,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
         // Правая колонка: история ответов (ошибки красным)
         cols[1].vertical(|ui| {
             glass_panel(ui, |ui| {
-                section_heading(ui, "Ответы", "");
+                section_heading(ui, app.t("history.answers"), "");
                 ui.add_space(2.0);
                 egui::ScrollArea::vertical()
                     .id_salt("history_answer_scroll")
@@ -39,7 +39,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                         render_history_text(ui, &app.history_answers, true);
                     });
                 ui.horizontal(|ui| {
-                    if pill_button(ui, "Очистить", false, false).clicked() {
+                    if pill_button(ui, app.t("history.clear"), false, false).clicked() {
                         app.history_questions.clear();
                         app.history_answers.clear();
                     }

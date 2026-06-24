@@ -42,6 +42,7 @@ pub struct AppConfig {
     pub gigachat_auth_key: String,
     pub local_llm_address: String,
     pub local_llm_port: u16,
+    pub lang: String,
 }
 
 impl Default for AppConfig {
@@ -63,6 +64,7 @@ impl Default for AppConfig {
             gigachat_auth_key: String::new(),
             local_llm_address: "127.0.0.1".into(),
             local_llm_port: 8000,
+            lang: "ru".into(),
         }
     }
 }

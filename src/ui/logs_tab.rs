@@ -3,7 +3,7 @@ use crate::ui::widgets::{glass_panel, pill_button, section_heading};
 
 pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     glass_panel(ui, |ui| {
-        section_heading(ui, "Логи / Диагностика", "");
+        section_heading(ui, app.t("logs.title"), "");
         ui.add_space(2.0);
         egui::ScrollArea::vertical()
             .id_salt("logs_scroll")
@@ -19,10 +19,10 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                 );
             });
         ui.horizontal(|ui| {
-            if pill_button(ui, "Очистить", false, false).clicked() {
+            if pill_button(ui, app.t("logs.clear"), false, false).clicked() {
                 app.logs.clear();
             }
-            if pill_button(ui, "Копировать", false, false).clicked() {
+            if pill_button(ui, app.t("main.copy_answer"), false, false).clicked() {
                 ui.ctx().copy_text(app.logs.clone());
             }
         });

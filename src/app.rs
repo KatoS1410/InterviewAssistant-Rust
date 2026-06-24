@@ -15,6 +15,7 @@ use crate::services::{
     hotkeys::{HotkeyAction, HotkeyService},
     transcriber::{TranscriberService, TranscriptEvent},
 };
+use crate::ui::locale::{self, Lang};
 use crate::ui::theme::{apply_theme, draw_header, Theme};
 use egui::Color32;
 
@@ -38,6 +39,7 @@ pub struct InterviewApp {
     pub chunk_ms_text: String,
     pub auto_ask_text: String,
     pub tail_ms_text: String,
+    pub lang: Lang,
 
     pub device_names: Vec<String>,
     pub recording: bool,
@@ -93,6 +95,8 @@ impl InterviewApp {
         let transcriber = TranscriberService::new();
         let hotkeys = HotkeyService::install(hotkey_tx).ok();
 
+        let lang = Lang::from_str(&cfg.lang);
+
         let mut app = Self {
             cfg: cfg.clone(),
             tab: 0,
@@ -112,6 +116,7 @@ impl InterviewApp {
             chunk_ms_text,
             auto_ask_text,
             tail_ms_text,
+            lang,
             device_names: Vec::new(),
             recording: false,
             record_mode: None,
@@ -143,6 +148,11 @@ impl InterviewApp {
         app.log("App initialized");
         app.load_vosk();
         app
+    }
+
+    /// Get localized string by key.
+    pub fn t(&self, key: &str) -> &'static str {
+        locale::t(self.lang, key)
     }
 
     pub fn log(&mut self, msg: &str) {
@@ -198,6 +208,7 @@ impl InterviewApp {
 
     pub fn save_config(&mut self) {
         self.sync_numeric_fields();
+        self.cfg.lang = self.lang.as_str().to_string();
         self.auto_ask_deadline = None;
         if let Err(err) = config::save(&self.cfg) {
             self.log(&format!("Save error: {err}"));
@@ -226,6 +237,7 @@ impl InterviewApp {
         if let Some(path) = rfd::FileDialog::new().pick_file() {
             match config::import_from(&path) {
                 Ok(cfg) => {
+                    self.lang = Lang::from_str(&cfg.lang);
                     self.cfg = cfg;
                     self.chunk_ms_text = self.cfg.chunk_ms.to_string();
                     self.auto_ask_text = self.cfg.auto_ask_sec.to_string();
@@ -568,7 +580,8 @@ impl eframe::App for InterviewApp {
                 ui.add_space(8.0);
 
                 ui.horizontal(|ui| {
-                    for (idx, name) in ["Основное", "История", "Настройки", "Логи"].iter().enumerate() {
+                    let tab_names = [self.t("tab.main"), self.t("tab.history"), self.t("tab.settings"), self.t("tab.logs")];
+                    for (idx, name) in tab_names.iter().enumerate() {
                         let selected = self.tab == idx;
                         let (fill, text_color, stroke_color) = if selected {
                             (Theme::ACCENT_SOFT, Color32::WHITE, Theme::ACCENT)

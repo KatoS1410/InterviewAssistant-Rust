@@ -1,5 +1,6 @@
 use crate::app::InterviewApp;
 use crate::config::PROVIDERS;
+use crate::ui::locale::Lang;
 use crate::ui::theme::Theme;
 use crate::ui::widgets::{
     copyable_text_edit, glass_panel, labeled_combo, pill_button, section_heading,
@@ -7,16 +8,15 @@ use crate::ui::widgets::{
 use egui::RichText;
 
 pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
-    // Используем columns с min spacing для выравнивания.
     ui.spacing_mut().item_spacing.x = 12.0;
     ui.columns(2, |cols| {
         // === Колонка 0 ===
         cols[0].vertical(|ui| {
             glass_panel(ui, |ui| {
-                section_heading(ui, "AI / Provider", "");
+                section_heading(ui, app.t("settings.ai_provider"), "");
                 let providers: Vec<String> = PROVIDERS.iter().map(|(p, _, _)| (*p).into()).collect();
                 let prev_provider = app.cfg.provider.clone();
-                labeled_combo(ui, "Provider", &mut app.cfg.provider, &providers);
+                labeled_combo(ui, app.t("settings.provider"), &mut app.cfg.provider, &providers);
                 if app.cfg.provider != prev_provider {
                     app.cfg.apply_provider_preset(&app.cfg.provider.clone());
                 }
@@ -24,7 +24,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                 ui.end_row();
                 match app.cfg.provider.to_lowercase().as_str() {
                     "gigachat" => {
-                        ui.label(RichText::new("Authorization Key").color(Theme::TEXT_DIM));
+                        ui.label(RichText::new(app.t("settings.auth_key")).color(Theme::TEXT_DIM));
                         ui.add(
                             egui::TextEdit::singleline(&mut app.cfg.gigachat_auth_key)
                                 .password(true)
@@ -32,21 +32,21 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                         );
                         ui.end_row();
 
-                        ui.label(RichText::new("Scope").color(Theme::TEXT_DIM));
+                        ui.label(RichText::new(app.t("settings.scope")).color(Theme::TEXT_DIM));
                         ui.text_edit_singleline(&mut app.cfg.gigachat_scope);
                         ui.end_row();
                     }
                     "local llms" => {
-                        ui.label(RichText::new("Address").color(Theme::TEXT_DIM));
+                        ui.label(RichText::new(app.t("settings.address")).color(Theme::TEXT_DIM));
                         ui.text_edit_singleline(&mut app.cfg.local_llm_address);
                         ui.end_row();
 
-                        ui.label(RichText::new("Port").color(Theme::TEXT_DIM));
+                        ui.label(RichText::new(app.t("settings.port")).color(Theme::TEXT_DIM));
                         ui.add(egui::DragValue::new(&mut app.cfg.local_llm_port).speed(1.0));
                         ui.end_row();
                     }
                     _ => {
-                        ui.label(RichText::new("API Key").color(Theme::TEXT_DIM));
+                        ui.label(RichText::new(app.t("settings.api_key")).color(Theme::TEXT_DIM));
                         ui.add(
                             egui::TextEdit::singleline(&mut app.cfg.api_key)
                                 .password(true)
@@ -54,21 +54,21 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                         );
                         ui.end_row();
 
-                        ui.label(RichText::new("Base URL").color(Theme::TEXT_DIM));
+                        ui.label(RichText::new(app.t("settings.base_url")).color(Theme::TEXT_DIM));
                         ui.text_edit_singleline(&mut app.cfg.base_url);
                         ui.end_row();
                     }
                 }
 
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Model").color(Theme::TEXT_DIM));
+                    ui.label(RichText::new(app.t("settings.model")).color(Theme::TEXT_DIM));
                     ui.text_edit_singleline(&mut app.cfg.model);
-                    if pill_button(ui, "Проверить", true, false).clicked() {
+                    if pill_button(ui, app.t("settings.test"), true, false).clicked() {
                         app.test_ai();
                     }
                 });
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Должность").color(Theme::TEXT_DIM));
+                    ui.label(RichText::new(app.t("settings.position")).color(Theme::TEXT_DIM));
                     ui.text_edit_singleline(&mut app.cfg.position);
                 });
             });
@@ -76,7 +76,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
             ui.add_space(6.0);
 
             glass_panel(ui, |ui| {
-                section_heading(ui, "System Prompt", "");
+                section_heading(ui, app.t("settings.system_prompt"), "");
                 copyable_text_edit(ui, "prompt", &mut app.cfg.system_prompt, 12);
             });
         });
@@ -84,37 +84,37 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
         // === Колонка 1 ===
         cols[1].vertical(|ui| {
             glass_panel(ui, |ui| {
-                section_heading(ui, "VOSK / Аудио", "");
+                section_heading(ui, app.t("settings.vosk_audio"), "");
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Model path").color(Theme::TEXT_DIM));
+                    ui.label(RichText::new(app.t("settings.model_path")).color(Theme::TEXT_DIM));
                     ui.text_edit_singleline(&mut app.cfg.vosk_model_path);
-                    if pill_button(ui, "...", false, false).clicked() {
+                    if pill_button(ui, app.t("misc.browse"), false, false).clicked() {
                         app.browse_vosk_model();
                     }
                 });
 
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Chunk ms").color(Theme::TEXT_DIM));
+                    ui.label(RichText::new(app.t("settings.chunk_ms")).color(Theme::TEXT_DIM));
                     ui.text_edit_singleline(&mut app.chunk_ms_text);
-                    ui.label(RichText::new("Auto ask sec").color(Theme::TEXT_DIM));
+                    ui.label(RichText::new(app.t("settings.auto_ask_sec")).color(Theme::TEXT_DIM));
                     ui.text_edit_singleline(&mut app.auto_ask_text);
                 });
 
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Tail ms").color(Theme::TEXT_DIM));
+                    ui.label(RichText::new(app.t("settings.tail_ms")).color(Theme::TEXT_DIM));
                     ui.text_edit_singleline(&mut app.tail_ms_text);
                     ui.label(
-                        RichText::new("Задержка после остановки для сбора хвоста loopback")
+                        RichText::new(app.t("settings.tail_hint"))
                             .size(10.0)
                             .color(Theme::TEXT_FAINT),
                     );
                 });
 
                 ui.horizontal(|ui| {
-                    if pill_button(ui, "Загрузить VOSK", true, false).clicked() {
+                    if pill_button(ui, app.t("settings.load_vosk"), true, false).clicked() {
                         app.load_vosk();
                     }
-                    if pill_button(ui, "Перезагрузить", false, false).clicked() {
+                    if pill_button(ui, app.t("settings.reload_vosk"), false, false).clicked() {
                         app.reload_vosk();
                     }
                 });
@@ -122,7 +122,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                 ui.add_space(4.0);
 
                 ui.label(
-                    RichText::new("Скачать VOSK модель можно здесь:")
+                    RichText::new(app.t("settings.download_hint"))
                         .size(12.0)
                         .color(Theme::TEXT_DIM),
                 );
@@ -131,19 +131,19 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                     "https://alphacephei.com/vosk/models",
                 );
                 ui.label(
-                    RichText::new("Распакуйте архив и укажите путь к папке с моделью.")
+                    RichText::new(app.t("settings.unpack_hint"))
                         .size(10.0)
                         .color(Theme::TEXT_FAINT),
                 );
                 ui.label(
-                    RichText::new("DLL скачается автоматически при загрузке модели.")
+                    RichText::new(app.t("settings.dll_hint"))
                         .size(10.0)
                         .color(Theme::TEXT_FAINT),
                 );
 
                 ui.add_space(8.0);
                 ui.label(
-                    RichText::new(format!("VOSK: {}", app.vosk_status))
+                    RichText::new(format!("{} {}", app.t("settings.vosk_status"), app.vosk_status))
                         .size(11.0)
                         .color(Theme::TEXT_DIM),
                 );
@@ -155,9 +155,9 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
             glass_panel(ui, |ui| {
                 ui.horizontal(|ui| {
                     let label = if app.config_edit_mode {
-                        "Скрыть конфиг"
+                        app.t("settings.hide_config")
                     } else {
-                        "Показать конфиг для редактирования"
+                        app.t("settings.show_config")
                     };
                     if pill_button(ui, label, !app.config_edit_mode, app.config_edit_mode).clicked() {
                         app.config_edit_mode = !app.config_edit_mode;
@@ -165,20 +165,37 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                 });
                 if app.config_edit_mode {
                     ui.add_space(4.0);
-                    section_heading(ui, "Конфиг", "");
+                    section_heading(ui, app.t("settings.config_title"), "");
                     ui.horizontal(|ui| {
-                        if pill_button(ui, "Сохранить", true, false).clicked() {
+                        if pill_button(ui, app.t("settings.save"), true, false).clicked() {
                             app.save_config();
                         }
-                        if pill_button(ui, "Экспорт", false, false).clicked() {
+                        if pill_button(ui, app.t("settings.export"), false, false).clicked() {
                             app.export_config();
                         }
-                        if pill_button(ui, "Импорт", false, false).clicked() {
+                        if pill_button(ui, app.t("settings.import"), false, false).clicked() {
                             app.import_config();
                         }
                     });
                     copyable_text_edit(ui, "cfg_preview", &mut app.config_preview, 10);
                 }
+            });
+
+            ui.add_space(6.0);
+
+            // Language selector
+            glass_panel(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(app.t("settings.language")).color(Theme::TEXT_DIM));
+                    let mut lang_str = app.lang.as_str().to_string();
+                    let langs: Vec<String> = vec!["ru".into(), "en".into()];
+                    let prev = lang_str.clone();
+                    labeled_combo(ui, "", &mut lang_str, &langs);
+                    if lang_str != prev {
+                        app.lang = Lang::from_str(&lang_str);
+                        app.save_config();
+                    }
+                });
             });
         });
     });

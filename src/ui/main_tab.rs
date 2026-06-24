@@ -20,7 +20,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     glass_panel(ui, |ui| {
         ui.horizontal(|ui| {
             ui.label(
-                egui::RichText::new("Запись")
+                egui::RichText::new(app.t("main.recording"))
                     .strong()
                     .color(crate::ui::theme::Theme::TEXT),
             );
@@ -38,7 +38,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                 app.detect_mic();
             }
 
-            if pill_button(ui, "Сохранить изменения", false, false).clicked() {
+            if pill_button(ui, app.t("settings.save"), false, false).clicked() {
                 app.save_config();
             }
 
@@ -59,7 +59,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
             );
             egui::ComboBox::from_id_salt("loopback_dev_main")
                 .selected_text(if app.cfg.loopback_device.is_empty() {
-                    "— не выбрано —"
+                    "—"
                 } else {
                     &app.cfg.loopback_device
                 })
@@ -76,7 +76,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
             );
             egui::ComboBox::from_id_salt("mic_dev_main")
                 .selected_text(if app.cfg.mic_device.is_empty() {
-                    "— не выбрано —"
+                    "—"
                 } else {
                     &app.cfg.mic_device
                 })
@@ -92,7 +92,6 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     ui.add_space(6.0);
 
     // Два окна рядом: слева — живая речь/вопрос, справа — ответ AI.
-    // Используем фиксированную высоту для выравнивания.
     let available_height = ui.available_height();
     ui.columns(2, |cols| {
         // Левое окно: распознанная речь / вопрос (редактируемое).
@@ -103,7 +102,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                 egui::Layout::top_down(egui::Align::Min),
                 |ui| {
                     glass_panel(ui, |ui| {
-                        section_heading(ui, "Распознавание речи / Вопрос", &app.transcript_hint);
+                        section_heading(ui, app.t("main.transcript"), &app.transcript_hint);
                         ui.add_space(2.0);
                         egui::ScrollArea::vertical()
                             .id_salt("transcript_scroll")
@@ -119,11 +118,11 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                                 );
                             });
                         ui.horizontal(|ui| {
-                            if pill_button(ui, "Очистить", false, false).clicked() {
+                            if pill_button(ui, app.t("main.clear"), false, false).clicked() {
                                 app.transcript.clear();
                                 app.question.clear();
                             }
-                            if pill_button(ui, "Отправить в ИИ", true, false).clicked() {
+                            if pill_button(ui, app.t("main.ask"), true, false).clicked() {
                                 app.question = app.transcript.clone();
                                 app.ask_ai();
                             }
@@ -141,7 +140,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                 egui::Layout::top_down(egui::Align::Min),
                 |ui| {
                     glass_panel(ui, |ui| {
-                        section_heading(ui, "Ответ AI", "");
+                        section_heading(ui, app.t("main.answer"), "");
                         ui.add_space(2.0);
                         egui::ScrollArea::vertical()
                             .id_salt("answer_scroll")
@@ -156,10 +155,10 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                                 );
                             });
                         ui.horizontal(|ui| {
-                            if pill_button(ui, "Очистить", false, false).clicked() {
+                            if pill_button(ui, app.t("main.clear"), false, false).clicked() {
                                 app.answer.clear();
                             }
-                            if pill_button(ui, "Предыдущий ответ", false, false).clicked() {
+                            if pill_button(ui, app.t("main.prev_answer"), false, false).clicked() {
                                 if !app.prev_answer.is_empty() && !app.prev_answer.starts_with("Ошибка AI:") {
                                     app.answer = app.prev_answer.clone();
                                     app.transcript = app.prev_question.clone();
