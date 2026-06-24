@@ -4,7 +4,7 @@ Creates an ar archive with debian-binary + control.tar.gz + data.tar.gz."""
 import os, sys, tarfile, io, struct, tempfile, shutil
 
 PKG_NAME = "interview-assistant"
-PKG_VER = "1.0.0"
+PKG_VER = "1.0.1"
 PKG_ARCH = "amd64"
 DEB_NAME = f"{PKG_NAME}_{PKG_VER}_{PKG_ARCH}.deb"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

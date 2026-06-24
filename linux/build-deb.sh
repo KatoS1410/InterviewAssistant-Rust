@@ -8,7 +8,7 @@ GREEN='\033[0;32m'; NC='\033[0m'
 log() { echo -e "${GREEN}[+]${NC} $*"; }
 
 PKG_NAME="interview-assistant"
-PKG_VER="1.0.0"
+PKG_VER="1.0.1"
 PKG_ARCH="amd64"
 DEB_NAME="${PKG_NAME}_${PKG_VER}_${PKG_ARCH}.deb"
 BUILD_DIR="/tmp/${PKG_NAME}-deb"

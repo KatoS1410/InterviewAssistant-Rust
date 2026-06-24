@@ -51,7 +51,7 @@ This installs system dependencies, Rust (if needed), clones the repo, builds the
 **Option B — .deb package:**
 ```bash
 # Download the .deb from Releases, then:
-sudo dpkg -i interview-assistant_1.0.0_amd64.deb
+sudo dpkg -i interview-assistant_1.0.1_amd64.deb
 sudo apt-get install -f   # auto-install missing dependencies
 ```
 
@@ -206,7 +206,7 @@ curl -fsSL https://raw.githubusercontent.com/KatoS1410/InterviewAssistant-Python
 **Вариант Б — .deb пакет:**
 ```bash
 # Скачай .deb из Releases, затем:
-sudo dpkg -i interview-assistant_1.0.0_amd64.deb
+sudo dpkg -i interview-assistant_1.0.1_amd64.deb
 sudo apt-get install -f   # автодоустановка недостающих зависимостей
 ```
 
