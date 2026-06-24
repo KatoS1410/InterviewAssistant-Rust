@@ -12,39 +12,49 @@ use std::path::{Path, PathBuf};
 
 use libloading::{Library, Symbol};
 
-/// On Windows, add `dir` to the DLL search path so dependent DLLs
-/// (libstdc++-6.dll, libwinpthread-1.dll, libgcc_s_seh-1.dll) are found.
-#[cfg(windows)]
-fn add_dll_directory(dir: &Path) -> Option<*mut std::ffi::c_void> {
-    use std::os::windows::ffi::OsStrExt;
-    let wide: Vec<u16> = dir.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
-    let cookie = unsafe {
-        windows_sys::Win32::System::LibraryLoader::AddDllDirectory(wide.as_ptr())
-    };
-    if cookie.is_null() {
-        None
-    } else {
-        Some(cookie)
+/// Load a DLL with full dependency resolution.
+/// On Windows, uses LoadLibraryExW with LOAD_WITH_ALTERED_SEARCH_PATH
+/// so that dependent DLLs (libstdc++-6.dll, etc.) are found in the DLL's directory.
+/// On other platforms, delegates to libloading::Library::new.
+fn load_library_with_deps(path: &Path) -> Result<Library, String> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        let wide: Vec<u16> = path
+            .as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+        // LOAD_WITH_ALTERED_SEARCH_PATH = 0x8:
+        //   If path is absolute, search the DLL's directory for dependencies first,
+        //   then fall back to standard system paths.
+        const LOAD_WITH_ALTERED_SEARCH_PATH: u32 = 0x8;
+        let handle = unsafe {
+            windows_sys::Win32::System::LibraryLoader::LoadLibraryExW(
+                wide.as_ptr(),
+                std::ptr::null_mut(),
+                LOAD_WITH_ALTERED_SEARCH_PATH,
+            )
+        };
+        if handle.is_null() {
+            return Err(format!(
+                "LoadLibraryExW failed for {}",
+                path.display()
+            ));
+        }
+        // SAFETY: handle is a valid HMODULE from LoadLibraryExW.
+        // libloading will call FreeLibrary on drop.
+        use libloading::os::windows::Library as WindowsLibrary;
+        let win_lib = unsafe { WindowsLibrary::from_raw(handle as isize) };
+        Ok(win_lib.into())
     }
-}
-
-#[cfg(not(windows))]
-fn add_dll_directory(_dir: &Path) -> Option<()> {
-    Some(())
-}
-
-/// Remove a previously added DLL directory.
-#[cfg(windows)]
-fn remove_dll_directory(cookie: Option<*mut std::ffi::c_void>) {
-    if let Some(c) = cookie {
+    #[cfg(not(windows))]
+    {
         unsafe {
-            windows_sys::Win32::System::LibraryLoader::RemoveDllDirectory(c);
+            Library::new(path).map_err(|e| format!("Library::new failed: {e}"))
         }
     }
 }
-
-#[cfg(not(windows))]
-fn remove_dll_directory(_cookie: Option<()>) {}
 
 
 /// Opaque VOSK model (loaded from model directory).
@@ -77,9 +87,6 @@ impl VoskDll {
     /// Load VOSK DLL. If not found locally, auto-downloads from GitHub.
     /// Searches in: model dir, parent dir, exe dir, cwd, whisper_model/.
     pub fn load(model_dir: &Path) -> Result<Self, String> {
-        // Add model dir to DLL search path so dependent DLLs are found.
-        let _cookie = add_dll_directory(model_dir);
-
         // First, try to find DLL locally.
         if let Ok(dll) = Self::try_load_local(model_dir) {
             return Ok(dll);
@@ -89,10 +96,7 @@ impl VoskDll {
         let target = model_dir.join("vosk.dll");
         match ensure_vosk_dll(&target) {
             Ok(path) => {
-                let lib = unsafe {
-                    Library::new(&path)
-                        .map_err(|e| format!("Failed to load downloaded VOSK DLL: {e}"))?
-                };
+                let lib = load_library_with_deps(&path)?;
                 Self::from_library(lib)
             }
             Err(e) => Err(format!(
@@ -124,10 +128,7 @@ impl VoskDll {
                 let candidate = dir.join(name);
                 if candidate.exists() {
                     let dll_path_abs = candidate.canonicalize().unwrap_or(candidate);
-                    let lib = unsafe {
-                        Library::new(&dll_path_abs)
-                            .map_err(|_| "Library::new failed".to_string())?
-                    };
+                    let lib = load_library_with_deps(&dll_path_abs)?;
                     return Self::from_library(lib);
                 }
             }
