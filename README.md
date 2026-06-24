@@ -2,7 +2,7 @@
 
 ```
 ╔════════════════════════════════════════════════════════╗
-║  Hold hotkey → Speak → Release → Get AI Answer        ║
+║  Hold hotkey → Speak → Release → Get AI Answer         ║
 ║  Offline STT (VOSK) + Multiple LLM Providers           ║
 ╚════════════════════════════════════════════════════════╝
 ```
