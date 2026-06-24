@@ -17,7 +17,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     }
 
     // Компактная панель управления записью сверху.
-    ui.set_max_width(ui.available_width());
+    ui.set_max_width(ui.available_width() - 8.0);
     glass_panel(ui, |ui| {
         ui.horizontal(|ui| {
             ui.label(
@@ -93,8 +93,8 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     // Два окна рядом: слева — живая речь/вопрос, справа — ответ AI.
     // Используем allocate_ui с точными размерами, чтобы блоки не вылезали.
     let available = ui.available_size();
-    let col_w = available.x / 2.0 - 6.0;
-    let col_h = available.y;
+    let col_w = available.x / 2.0 - 12.0;
+    let col_h = available.y - 8.0;
     ui.columns(2, |cols| {
         // Левое окно: распознанная речь / вопрос.
         cols[0].allocate_ui(egui::vec2(col_w, col_h), |ui| {

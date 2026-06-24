@@ -11,7 +11,7 @@ use egui::RichText;
 
 pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     let available = ui.available_size();
-    let col_w = available.x / 2.0 - 6.0;
+    let col_w = available.x / 2.0 - 12.0;
     ui.columns(2, |cols| {
         // === Колонка 0 ===
         cols[0].allocate_ui(egui::vec2(col_w, available.y), |ui| {
