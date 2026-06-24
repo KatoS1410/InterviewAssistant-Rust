@@ -44,10 +44,6 @@ use crate::core::devices::{is_loopback_name, resolve_device, AudioDeviceInfo};
 /// Target sample rate for VOSK recognition (16kHz mono).
 pub const SAMPLE_RATE: u32 = 16000;
 
-/// Milliseconds to wait after stop flag is set before dropping the WASAPI stream.
-/// This allows the loopback driver to deliver the final audio buffers.
-/// 6000ms was determined empirically — shorter values cause tail truncation.
-const TAIL_MS: u64 = 6000;
 
 // ---------------------------------------------------------------------------
 // AudioMode
@@ -96,12 +92,14 @@ impl AudioRecorder {
     /// Start capturing audio from the given device.
     ///
     /// `chunk_ms` controls how often audio chunks are sent to `tx`.
+    /// `tail_ms` is the delay after stop to collect the loopback tail.
     /// If a recording is already in progress, it is stopped first.
     pub fn start(
         &mut self,
         mode: AudioMode,
         device_name: &str,
         chunk_ms: u32,
+        tail_ms: u32,
         tx: Sender<Vec<i16>>,
     ) -> Result<()> {
         if self.is_active() {
@@ -121,7 +119,7 @@ impl AudioRecorder {
             .name("audio-capture".into())
             .spawn(move || {
                 if let Err(err) =
-                    capture_loop(device, mode, chunk_ms, stop_flag, tx, audio_buffer)
+                    capture_loop(device, mode, chunk_ms, tail_ms, stop_flag, tx, audio_buffer)
                 {
                     eprintln!("audio capture error: {err}");
                 }
@@ -205,6 +203,7 @@ fn capture_loop(
     device_info: AudioDeviceInfo,
     mode: AudioMode,
     chunk_ms: u32,
+    tail_ms: u32,
     stop_flag: Arc<AtomicBool>,
     tx: Sender<Vec<i16>>,
     buffer: Arc<Mutex<Vec<i16>>>,
@@ -243,8 +242,8 @@ fn capture_loop(
     }
 
     // --- Loopback tail collection ---
-    // Keep the stream alive for TAIL_MS so WASAPI delivers the final buffers.
-    thread::sleep(std::time::Duration::from_millis(TAIL_MS));
+    // Keep the stream alive for tail_ms so WASAPI delivers the final buffers.
+    thread::sleep(std::time::Duration::from_millis(tail_ms as u64));
     drop(stream);
 
     // Flush any samples still sitting in the accumulation buffer.

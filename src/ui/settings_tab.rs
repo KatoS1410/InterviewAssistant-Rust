@@ -101,6 +101,16 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                 });
 
                 ui.horizontal(|ui| {
+                    ui.label(RichText::new("Tail ms").color(Theme::TEXT_DIM));
+                    ui.text_edit_singleline(&mut app.tail_ms_text);
+                    ui.label(
+                        RichText::new("Задержка после остановки для сбора хвоста loopback")
+                            .size(10.0)
+                            .color(Theme::TEXT_FAINT),
+                    );
+                });
+
+                ui.horizontal(|ui| {
                     if pill_button(ui, "Загрузить VOSK", true, false).clicked() {
                         app.load_vosk();
                     }

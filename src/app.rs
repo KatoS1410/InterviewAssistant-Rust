@@ -37,6 +37,7 @@ pub struct InterviewApp {
     pub config_preview: String,
     pub chunk_ms_text: String,
     pub auto_ask_text: String,
+    pub tail_ms_text: String,
 
     pub device_names: Vec<String>,
     pub recording: bool,
@@ -82,6 +83,7 @@ impl InterviewApp {
         let cfg = config::load();
         let chunk_ms_text = cfg.chunk_ms.to_string();
         let auto_ask_text = cfg.auto_ask_sec.to_string();
+        let tail_ms_text = cfg.tail_ms.to_string();
         let (audio_tx, audio_rx) = unbounded();
         let (transcript_tx, transcript_rx) = unbounded();
         let (ai_tx, ai_rx) = unbounded();
@@ -109,6 +111,7 @@ impl InterviewApp {
             config_preview: serde_json::to_string_pretty(&cfg).unwrap_or_default(),
             chunk_ms_text,
             auto_ask_text,
+            tail_ms_text,
             device_names: Vec::new(),
             recording: false,
             record_mode: None,
@@ -226,6 +229,7 @@ impl InterviewApp {
                     self.cfg = cfg;
                     self.chunk_ms_text = self.cfg.chunk_ms.to_string();
                     self.auto_ask_text = self.cfg.auto_ask_sec.to_string();
+                    self.tail_ms_text = self.cfg.tail_ms.to_string();
                     self.refresh_config_preview();
                     self.log(&format!("Imported: {}", path.display()));
                 }
@@ -241,6 +245,7 @@ impl InterviewApp {
     fn sync_numeric_fields(&mut self) {
         self.cfg.chunk_ms = to_int(&self.chunk_ms_text, 250).max(20) as u32;
         self.cfg.auto_ask_sec = to_int(&self.auto_ask_text, 0).max(0) as u32;
+        self.cfg.tail_ms = to_int(&self.tail_ms_text, 6000).max(0) as u32;
     }
 
     /// Загрузка VOSK модели из указанного в конфиге пути.
@@ -350,6 +355,7 @@ impl InterviewApp {
             mode,
             &device,
             self.cfg.chunk_ms,
+            self.cfg.tail_ms,
             self.audio_tx.clone(),
         ) {
             Ok(_) => {
