@@ -5,11 +5,11 @@ use egui::RichText;
 
 pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     let available = ui.available_size();
+    let col_w = available.x / 2.0 - 6.0;
+    let col_h = available.y;
     ui.columns(2, |cols| {
         // Левая колонка: история вопросов
-        cols[0].vertical(|ui| {
-            ui.set_max_width(available.x / 2.0 - 6.0);
-            ui.set_max_height(available.y);
+        cols[0].allocate_ui(egui::vec2(col_w, col_h), |ui| {
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("history.questions"), "");
                 egui::ScrollArea::vertical()
@@ -29,9 +29,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
         });
 
         // Правая колонка: история ответов (ошибки красным)
-        cols[1].vertical(|ui| {
-            ui.set_max_width(available.x / 2.0 - 6.0);
-            ui.set_max_height(available.y);
+        cols[1].allocate_ui(egui::vec2(col_w, col_h), |ui| {
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("history.answers"), "");
                 egui::ScrollArea::vertical()

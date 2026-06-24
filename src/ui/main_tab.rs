@@ -17,6 +17,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     }
 
     // Компактная панель управления записью сверху.
+    ui.set_max_width(ui.available_width());
     glass_panel(ui, |ui| {
         ui.horizontal(|ui| {
             ui.label(
@@ -26,13 +27,11 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
             );
             ui.separator();
 
-            // Кнопка Loopback — автоопределение + красная при активной записи loopback.
             let loopback_rec = app.recording && app.record_mode == Some(crate::services::audio::AudioMode::Loopback);
             if pill_button(ui, "Loopback", false, loopback_rec).clicked() {
                 app.detect_loopback();
             }
 
-            // Кнопка Mic — автоопределение + красная при активной записи mic.
             let mic_rec = app.recording && app.record_mode == Some(crate::services::audio::AudioMode::Mic);
             if pill_button(ui, "Mic", false, mic_rec).clicked() {
                 app.detect_mic();
@@ -92,13 +91,13 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     ui.add_space(6.0);
 
     // Два окна рядом: слева — живая речь/вопрос, справа — ответ AI.
-    // Используем columns, но ограничиваем ширину внутри каждой колонки.
+    // Используем allocate_ui с точными размерами, чтобы блоки не вылезали.
     let available = ui.available_size();
+    let col_w = available.x / 2.0 - 6.0;
+    let col_h = available.y;
     ui.columns(2, |cols| {
         // Левое окно: распознанная речь / вопрос.
-        cols[0].vertical(|ui| {
-            ui.set_max_width(available.x / 2.0 - 6.0);
-            ui.set_max_height(available.y);
+        cols[0].allocate_ui(egui::vec2(col_w, col_h), |ui| {
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("main.transcript"), &app.transcript_hint);
                 egui::ScrollArea::vertical()
@@ -128,9 +127,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
         });
 
         // Правое окно: ответ AI.
-        cols[1].vertical(|ui| {
-            ui.set_max_width(available.x / 2.0 - 6.0);
-            ui.set_max_height(available.y);
+        cols[1].allocate_ui(egui::vec2(col_w, col_h), |ui| {
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("main.answer"), "");
                 egui::ScrollArea::vertical()

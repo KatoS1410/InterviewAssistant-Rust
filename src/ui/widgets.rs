@@ -1,4 +1,4 @@
-use egui::{Color32, Frame, Margin, RichText, Rounding, Stroke, Ui, Vec2};
+use egui::{Color32, FontId, Frame, Margin, RichText, Rounding, Stroke, Ui, Vec2};
 
 use crate::ui::theme::Theme;
 
@@ -31,7 +31,7 @@ pub fn section_heading(ui: &mut Ui, title: &str, hint: &str) {
 }
 
 /// Кнопка-пилюля: закруглённая, с акцентом при `accent=true`, красная при `danger=true`.
-/// Приятный стиль: мягкие скругления, hover-подсветка.
+/// При наведении текст становится зелёным (matrix-style), фон темнеет.
 pub fn pill_button(ui: &mut Ui, label: &str, accent: bool, danger: bool) -> egui::Response {
     let (fill, text_color, stroke_color) = if danger {
         (Theme::DANGER_DIM, Color32::WHITE, Theme::DANGER)
@@ -41,20 +41,23 @@ pub fn pill_button(ui: &mut Ui, label: &str, accent: bool, danger: bool) -> egui
         (Theme::PANEL_DARK, Theme::TEXT, Theme::BORDER_STRONG)
     };
 
-    let button = egui::Button::new(RichText::new(label).color(text_color).size(13.0))
-        .fill(fill)
-        .stroke(Stroke::new(1.5, stroke_color))
-        .rounding(Rounding::same(22.0))
-        .min_size(Vec2::new(44.0, 32.0));
+    let response = ui.add(
+        egui::Button::new(RichText::new(label).color(text_color).size(13.0))
+            .fill(fill)
+            .stroke(Stroke::new(1.5, stroke_color))
+            .rounding(Rounding::same(22.0))
+            .min_size(Vec2::new(44.0, 32.0)),
+    );
 
-    let response = ui.add(button);
-
-    // Hover glow — лёгкое белое свечение вокруг кнопки.
+    // При наведении перекрашиваем текст в зелёный.
     if response.hovered() {
-        ui.painter().rect_filled(
-            response.rect.expand(2.0),
-            Rounding::same(24.0),
-            Color32::from_rgba_premultiplied(255, 255, 255, 8),
+        let hover_rect = response.rect.shrink(2.0);
+        ui.painter().text(
+            hover_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            label,
+            FontId::proportional(13.0),
+            Color32::from_rgb(0, 220, 100),
         );
     }
 

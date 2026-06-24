@@ -11,10 +11,10 @@ use egui::RichText;
 
 pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     let available = ui.available_size();
+    let col_w = available.x / 2.0 - 6.0;
     ui.columns(2, |cols| {
         // === Колонка 0 ===
-        cols[0].vertical(|ui| {
-            ui.set_max_width(available.x / 2.0 - 6.0);
+        cols[0].allocate_ui(egui::vec2(col_w, available.y), |ui| {
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("settings.ai_provider"), "");
                 let providers: Vec<String> = PROVIDERS.iter().map(|(p, _, _)| (*p).into()).collect();
@@ -91,8 +91,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
         });
 
         // === Колонка 1 ===
-        cols[1].vertical(|ui| {
-            ui.set_max_width(available.x / 2.0 - 6.0);
+        cols[1].allocate_ui(egui::vec2(col_w, available.y), |ui| {
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("settings.vosk_audio"), "");
                 ui.horizontal(|ui| {

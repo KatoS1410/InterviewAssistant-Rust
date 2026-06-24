@@ -113,13 +113,15 @@ pub fn apply_theme(ctx: &egui::Context) {
     visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, Theme::TEXT);
     visuals.widgets.inactive.rounding = Rounding::same(10.0);
 
-    visuals.widgets.hovered.bg_fill = Theme::GLASS;
-    visuals.widgets.hovered.fg_stroke = Stroke::new(1.2, Color32::WHITE);
+    // Hover: тёмный фон с тёмно-зелёными краями (matrix-style).
+    visuals.widgets.hovered.bg_fill = Color32::from_rgb(20, 28, 22);
+    visuals.widgets.hovered.fg_stroke = Stroke::new(1.5, Color32::from_rgb(0, 180, 80));
     visuals.widgets.hovered.rounding = Rounding::same(10.0);
     visuals.widgets.hovered.expansion = 1.0;
 
-    visuals.widgets.active.bg_fill = Theme::ACCENT_SOFT;
-    visuals.widgets.active.fg_stroke = Stroke::new(1.2, Color32::WHITE);
+    // Active (нажатие): ещё темнее, ярче зелёный.
+    visuals.widgets.active.bg_fill = Color32::from_rgb(14, 22, 16);
+    visuals.widgets.active.fg_stroke = Stroke::new(1.8, Color32::from_rgb(0, 220, 100));
     visuals.widgets.active.rounding = Rounding::same(10.0);
 
     // Выделение текста.
