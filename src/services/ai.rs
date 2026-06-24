@@ -109,7 +109,10 @@ impl AiSession {
                 content: self.system_prompt.clone(),
             });
         }
-        out.extend(self.messages.clone());
+        // Клонируем сообщения по одному напрямую в `out`,
+        // избегая промежуточной аллокации всего вектора
+        // (раньше было `self.messages.clone()`, что создавало лишний Vec).
+        out.extend(self.messages.iter().cloned());
         out
     }
 
@@ -368,5 +371,3 @@ pub enum AiEvent {
     Answer(String),
     Error(String),
 }
-
-

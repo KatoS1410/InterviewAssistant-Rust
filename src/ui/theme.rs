@@ -65,10 +65,10 @@ pub fn apply_theme(ctx: &egui::Context) {
     let mut style = Style::default();
 
     // Просторные отступы — iOS-style breathing room.
-    style.spacing.item_spacing = egui::vec2(10.0, 10.0);
-    style.spacing.button_padding = egui::vec2(18.0, 10.0);
-    style.spacing.window_margin = egui::Margin::same(12.0);
-    style.spacing.text_edit_width = 200.0;
+    style.spacing.item_spacing = egui::vec2(5.0, 5.0);
+    style.spacing.button_padding = egui::vec2(8.0, 4.0);
+    style.spacing.window_margin = egui::Margin::same(4.0);
+    style.spacing.text_edit_width = 120.0;
     style.spacing.indent = 16.0;
     style.spacing.icon_width = 20.0;
     style.spacing.icon_spacing = 6.0;

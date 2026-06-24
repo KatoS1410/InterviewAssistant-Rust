@@ -7,7 +7,7 @@ use eframe::egui;
 
 use crate::config::{self, AppConfig};
 use crate::core::{
-    list_input_devices, timestamp, to_int, SingleInstanceGuard,
+    list_input_devices, timestamp, to_int, trim_entries, trim_lines, SingleInstanceGuard,
 };
 use crate::services::{
     ai::{spawn_ai_request, AiEvent, AiSession},
@@ -18,6 +18,14 @@ use crate::services::{
 use crate::ui::locale::{self, Lang};
 use crate::ui::theme::{apply_theme, draw_header, Theme};
 use egui::Color32;
+
+/// Максимум строк в логах. Старые строки удаляются, чтобы `logs` не рос
+/// бесконечно и не съедал память при долгой работе приложения.
+const MAX_LOG_LINES: usize = 5000;
+
+/// Максимум записей в истории вопросов/ответов AI.
+/// Запись = один вопрос или ответ (разделитель между записями — `\n\n`).
+const MAX_HISTORY_ENTRIES: usize = 500;
 
 pub struct InterviewApp {
     pub cfg: AppConfig,
@@ -114,7 +122,7 @@ impl InterviewApp {
             status: locale::t(lang, "header.hint").to_string(),
             transcript_hint: locale::t(lang, "main.live_speech").to_string(),
             vosk_status: locale::t(lang, "vosk.not_loaded").to_string(),
-            config_preview: serde_json::to_string_pretty(&cfg).unwrap_or_default(),
+            config_preview: serde_json::to_string(&cfg).unwrap_or_default(),
             chunk_ms_text,
             auto_ask_text,
             tail_ms_text,
@@ -161,6 +169,8 @@ impl InterviewApp {
     pub fn log(&mut self, msg: &str) {
         let line = format!("[{}] {msg}\n", timestamp());
         self.logs.push_str(&line);
+        // Не даём логам расти бесконечно — оставляем последние N строк.
+        trim_lines(&mut self.logs, MAX_LOG_LINES);
     }
 
     pub fn set_status(&mut self, msg: &str) {
@@ -253,7 +263,10 @@ impl InterviewApp {
     }
 
     pub fn refresh_config_preview(&mut self) {
-        self.config_preview = serde_json::to_string_pretty(&self.cfg).unwrap_or_default();
+        // Обычный to_string (без pretty) в несколько раз быстрее.
+        // Для preview в настройках читаемость менее важна, чем скорость:
+        // refresh_config_preview вызывается при каждом save/detect_device.
+        self.config_preview = serde_json::to_string(&self.cfg).unwrap_or_default();
     }
 
     fn sync_numeric_fields(&mut self) {
@@ -484,16 +497,19 @@ impl InterviewApp {
                     // Сохраняем в историю
                     if !self.question.is_empty() {
                         if !self.history_questions.is_empty() {
-                            self.history_questions.push_str("\n\n");
+                            self.history_questions.push(crate::core::helpers::ENTRY_SEP);
                         }
                         self.history_questions.push_str(&self.question);
                     }
                     if !text.is_empty() {
                         if !self.history_answers.is_empty() {
-                            self.history_answers.push_str("\n\n");
+                            self.history_answers.push(crate::core::helpers::ENTRY_SEP);
                         }
                         self.history_answers.push_str(&text);
                     }
+                    // Ограничиваем размер истории, чтобы не копить память.
+                    trim_entries(&mut self.history_questions, MAX_HISTORY_ENTRIES);
+                    trim_entries(&mut self.history_answers, MAX_HISTORY_ENTRIES);
                     self.answer = text;
                     self.big_status.clear();
                     self.set_status(self.t("main.ai_response"));
@@ -503,14 +519,17 @@ impl InterviewApp {
                     // Сохраняем неотвеченный вопрос в историю с пометкой ошибки
                     if !self.question.is_empty() {
                         if !self.history_questions.is_empty() {
-                            self.history_questions.push_str("\n\n");
+                            self.history_questions.push(crate::core::helpers::ENTRY_SEP);
                         }
                         self.history_questions.push_str(&self.question);
                     }
                     if !self.history_answers.is_empty() {
-                        self.history_answers.push_str("\n\n");
+                        self.history_answers.push(crate::core::helpers::ENTRY_SEP);
                     }
                     self.history_answers.push_str(&format!("[ОШИБКА] {err}"));
+                    // Ограничиваем размер истории, чтобы не копить память.
+                    trim_entries(&mut self.history_questions, MAX_HISTORY_ENTRIES);
+                    trim_entries(&mut self.history_answers, MAX_HISTORY_ENTRIES);
                     // НЕ затираем answer — сохраняем последний успешный ответ.
                     // Ошибку показываем в last_error (под правым окном).
                     self.last_error = format!("{}: {err}", self.t("main.ai_error"));
@@ -566,6 +585,7 @@ impl InterviewApp {
 
 impl eframe::App for InterviewApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.set_visuals(egui::Visuals::dark());
         self.poll_channels();
         ctx.request_repaint_after(Duration::from_millis(50));
 
@@ -625,6 +645,9 @@ impl eframe::App for InterviewApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        // Даём VOSK-воркеру фору на graceful cleanup до того,
+        // как начнётся Drop с таймаутом 3 секунды.
+        self.transcriber.unload();
         self.audio.stop();
     }
 }
@@ -640,8 +663,8 @@ pub fn launch() -> eframe::Result<()> {
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1180.0, 760.0])
-            .with_min_inner_size([960.0, 640.0])
+            .with_inner_size([1450.0, 880.0])
+            .with_min_inner_size([1200.0, 720.0])
             .with_title("Interview Assistant"),
         ..Default::default()
     };

@@ -130,7 +130,17 @@ impl Drop for TranscriberService {
     fn drop(&mut self) {
         let _ = self.cmd_tx.send(WorkerMsg::Shutdown);
         if let Some(worker) = self.worker.take() {
-            let _ = worker.join();
+            // Graceful shutdown: даём воркеру 3 секунды на завершение.
+            // Если VOSK грузит модель — join() может висеть минутами.
+            // Таймаут предотвращает блокировку UI при закрытии приложения.
+            let (done_tx, done_rx) = std::sync::mpsc::channel();
+            std::thread::spawn(move || {
+                let _ = worker.join();
+                let _ = done_tx.send(());
+            });
+            // Ждём сигнал с таймаутом 3 секунды.
+            let _ = done_rx.recv_timeout(std::time::Duration::from_secs(3));
+            // Если таймаут — поток detached, OS освободит ресурсы при завершении процесса.
         }
     }
 }

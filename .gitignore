@@ -17,3 +17,5 @@ run.bat
 *.tar.gz
 *.log
 .aider*
+*.deb
+!/interview-assistant_1.0.1_amd64.deb

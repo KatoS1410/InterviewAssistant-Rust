@@ -24,12 +24,6 @@ impl Lang {
         }
     }
 
-    pub fn display(&self) -> &'static str {
-        match self {
-            Lang::Ru => "Русский",
-            Lang::En => "English",
-        }
-    }
 }
 
 /// Returns the localized string for the given key.
