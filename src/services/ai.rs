@@ -37,8 +37,7 @@ impl AiSession {
             .timeout(std::time::Duration::from_secs(180))
             .build()
             .unwrap_or_else(|_| Client::new());
-        // Отдельный клиент для GigaChat — серверы Сбера используют сертификаты
-        // российского УЦ, которых нет в стандартном наборе корневых сертификатов.
+        // Отдельный клиент для GigaChat (российские сертификаты)
         let giga_client = Client::builder()
             .danger_accept_invalid_certs(true)
             .timeout(std::time::Duration::from_secs(180))
@@ -56,7 +55,7 @@ impl AiSession {
     pub fn configure(&mut self, cfg: AppConfig) {
         self.system_prompt = cfg.resolved_system_prompt();
         self.cfg = cfg;
-        // Пересоздаём клиенты при смене конфигурации
+        // Пересоздаём клиенты
         self.client = Client::builder()
             .timeout(std::time::Duration::from_secs(180))
             .build()
@@ -109,9 +108,7 @@ impl AiSession {
                 content: self.system_prompt.clone(),
             });
         }
-        // Клонируем сообщения по одному напрямую в `out`,
-        // избегая промежуточной аллокации всего вектора
-        // (раньше было `self.messages.clone()`, что создавало лишний Vec).
+        // Добавляем сообщения
         out.extend(self.messages.iter().cloned());
         out
     }
@@ -128,8 +125,7 @@ impl AiSession {
         if self.cfg.api_key.trim().is_empty() {
             return Err(anyhow!("Не указан API Key"));
         }
-        // Санитизируем API key: удаляем невидимые и не-ASCII символы,
-        // которые ломают парсинг HTTP-заголовков.
+        // Санитизируем API key
         let clean_key: String = self.cfg.api_key.chars()
             .filter(|c| c.is_ascii_graphic() || *c == ' ')
             .collect::<String>()
@@ -308,7 +304,7 @@ fn gigachat_token(client: &Client, cfg: &AppConfig) -> Result<String> {
         return Err(anyhow!("GigaChat: не указан Authorization Key"));
     }
 
-    // Authorization Key передаётся напрямую в Basic (как в документации GigaChat).
+    // Authorization Key в Basic
     let resp = client
         .post("https://ngw.devices.sberbank.ru:9443/api/v2/oauth")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
