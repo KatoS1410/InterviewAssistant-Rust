@@ -1,12 +1,4 @@
-//! Transcriber service using VOSK speech recognition via FFI.
-//! Model is loaded once and kept in memory.
-//!
-//! Architecture mirrors the proven C# approach:
-//! 1. Record audio into a buffer (no chunking to recognizer during recording).
-//! 2. On stop, feed the ENTIRE buffer to a fresh recognizer in one pass.
-//! 3. Get the final result — no partials, no streaming.
-//!
-//! This gives VOSK full context and produces the best recognition quality.
+//! Сервис распознавания речи через VOSK (FFI)
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -113,8 +105,7 @@ impl TranscriberService {
         let _ = self.cmd_tx.send(WorkerMsg::Unload);
     }
 
-    /// Feed the entire recorded buffer to VOSK for recognition.
-    /// Called once after recording stops — no streaming, no partials.
+    /// Распознать весь буфер (вызывается один раз после остановки записи)
     pub fn recognize(&self, samples: &[i16], source: &str) {
         if !self.is_loaded() || samples.is_empty() {
             return;
@@ -130,17 +121,13 @@ impl Drop for TranscriberService {
     fn drop(&mut self) {
         let _ = self.cmd_tx.send(WorkerMsg::Shutdown);
         if let Some(worker) = self.worker.take() {
-            // Graceful shutdown: даём воркеру 3 секунды на завершение.
-            // Если VOSK грузит модель — join() может висеть минутами.
-            // Таймаут предотвращает блокировку UI при закрытии приложения.
+            // Корректное завершение с таймаутом 3 секунды
             let (done_tx, done_rx) = std::sync::mpsc::channel();
             std::thread::spawn(move || {
                 let _ = worker.join();
                 let _ = done_tx.send(());
             });
-            // Ждём сигнал с таймаутом 3 секунды.
             let _ = done_rx.recv_timeout(std::time::Duration::from_secs(3));
-            // Если таймаут — поток detached, OS освободит ресурсы при завершении процесса.
         }
     }
 }
@@ -189,7 +176,7 @@ fn vosk_worker(
                     continue;
                 }
 
-                // Free previous model.
+                // Освобождаем предыдущую модель
                 if !model.is_null() {
                     if let Some(ref d) = dll {
                         unsafe { d.free_model(model); }
@@ -197,7 +184,7 @@ fn vosk_worker(
                     model = std::ptr::null_mut();
                 }
 
-                // Load VOSK DLL (auto-downloads if not found locally).
+                // Загружаем VOSK DLL (скачивает если нужно)
                 if dll.is_none() {
                     send(
                         &event_tx,
@@ -216,7 +203,7 @@ fn vosk_worker(
 
                 let dll_ref = dll.as_ref().unwrap();
 
-                // Load the VOSK model.
+                // Загружаем модель VOSK
                 let model_dir_str = path.display().to_string();
                 match unsafe { dll_ref.load_model(&model_dir_str) } {
                     Ok(m) => {
@@ -255,8 +242,7 @@ fn vosk_worker(
 
                 let dll_ref = dll.as_ref().unwrap();
 
-                // Create a fresh recognizer for this recording session.
-                // This mirrors the C# approach: new recognizer per recording.
+                // Новый распознаватель для этой сессии
                 let recognizer: *mut VoskRecognizer = match unsafe {
                     dll_ref.create_recognizer(model, SAMPLE_RATE as f32)
                 } {
@@ -272,18 +258,16 @@ fn vosk_worker(
                     TranscriptEvent::Status("Transcribing...".into()),
                 );
 
-                // Feed ALL samples to the recognizer in one pass.
-                // VOSK needs full context for accurate recognition.
-                // Chunking breaks context and produces garbage.
+                // Отправляем все образцы за один проход
                 unsafe {
                     dll_ref.accept_waveform(recognizer, &samples);
                 }
 
-                // Get the final result.
+                // Получаем финальный результат
                 let result = unsafe { dll_ref.result(recognizer) };
                 let text = parse_vosk_json(&result);
 
-                // Free the per-session recognizer.
+                // Освобождаем распознаватель сессии
                 unsafe { dll_ref.free_recognizer(recognizer); }
 
                 if !text.is_empty() {
@@ -308,14 +292,13 @@ fn vosk_worker(
     }
 }
 
-/// Parse VOSK JSON result to extract the recognized text.
-/// VOSK returns JSON like: {"text": "recognized words"}
+/// Извлечение текста из JSON результата VOSK
 fn parse_vosk_json(json: &str) -> String {
     if json.is_empty() {
         return String::new();
     }
 
-    // Try "text" field (final result).
+    // Поле "text" (финальный результат)
     if let Some(start) = json.find("\"text\"") {
         if let Some(colon) = json[start..].find(':') {
             let after_colon = &json[start + colon + 1..];
@@ -328,7 +311,7 @@ fn parse_vosk_json(json: &str) -> String {
         }
     }
 
-    // Try "partial" field (interim result) — fallback.
+    // Поле "partial" (промежуточный результат)
     if let Some(start) = json.find("\"partial\"") {
         if let Some(colon) = json[start..].find(':') {
             let after_colon = &json[start + colon + 1..];
