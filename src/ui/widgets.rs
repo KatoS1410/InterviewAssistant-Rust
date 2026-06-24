@@ -3,6 +3,7 @@ use egui::{Color32, FontId, Frame, Margin, RichText, Rounding, Stroke, Ui, Vec2}
 use crate::ui::theme::Theme;
 
 /// Стеклянная панель с закруглёнными углами и тонкой рамкой.
+/// Содержимое обрезается по границам панели (clip).
 pub fn glass_panel(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
     Frame::none()
         .fill(Theme::GLASS)
@@ -10,6 +11,7 @@ pub fn glass_panel(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
         .rounding(Rounding::same(12.0))
         .inner_margin(Margin::symmetric(12.0, 10.0))
         .show(ui, |ui| {
+            ui.set_clip_rect(ui.max_rect());
             add_contents(ui);
         });
 }

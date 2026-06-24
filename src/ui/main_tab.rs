@@ -98,6 +98,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     ui.columns(2, |cols| {
         // Левое окно: распознанная речь / вопрос.
         cols[0].allocate_ui(egui::vec2(col_w, col_h), |ui| {
+            ui.set_clip_rect(ui.max_rect());
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("main.transcript"), &app.transcript_hint);
                 egui::ScrollArea::vertical()
@@ -128,6 +129,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
 
         // Правое окно: ответ AI.
         cols[1].allocate_ui(egui::vec2(col_w, col_h), |ui| {
+            ui.set_clip_rect(ui.max_rect());
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("main.answer"), "");
                 egui::ScrollArea::vertical()

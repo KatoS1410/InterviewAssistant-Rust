@@ -15,6 +15,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
     ui.columns(2, |cols| {
         // === Колонка 0 ===
         cols[0].allocate_ui(egui::vec2(col_w, available.y), |ui| {
+            ui.set_clip_rect(ui.max_rect());
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("settings.ai_provider"), "");
                 let providers: Vec<String> = PROVIDERS.iter().map(|(p, _, _)| (*p).into()).collect();
@@ -92,6 +93,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
 
         // === Колонка 1 ===
         cols[1].allocate_ui(egui::vec2(col_w, available.y), |ui| {
+            ui.set_clip_rect(ui.max_rect());
             glass_panel(ui, |ui| {
                 section_heading(ui, app.t("settings.vosk_audio"), "");
                 ui.horizontal(|ui| {
