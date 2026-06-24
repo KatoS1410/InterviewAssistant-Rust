@@ -15,16 +15,6 @@
 
 Desktop assistant for tech interviews. Press `←` or `→`, speak, release — speech gets transcribed offline (VOSK) and sent to AI.
 
-### Features
-
-- **Offline STT** — VOSK recognition, no internet for transcription
-- **Multiple AI** — OpenAI, DeepSeek, OpenRouter, Ollama (local), GigaChat, custom endpoints
-- **Global hotkeys** — `←` system audio, `→` microphone — works unfocused
-- **Non-blocking** — Audio capture & recognition in background threads
-- **Dark theme** — iOS-style dark mode
-- **History** — All Q&A pairs saved
-- **Configurable** — JSON config, editable in-app
-
 ### Quick Start
 
 #### Windows
@@ -112,17 +102,7 @@ sudo cp target/release/interview-assistant /usr/local/bin/
 
 ## Русский
 
-Десктопный помощник для собеседований. Нажми `←` или `→`, говори, отпусти — речь распознаётся офлайн и отправляется в AI.
-
-### Возможности
-
-- **Офлайн STT** — VOSK, интернет не нужен
-- **Множество AI** — OpenAI, DeepSeek, OpenRouter, Ollama, GigaChat, свои endpoints
-- **Глобальные хоткеи** — `←` системный звук, `→` микрофон — работают без фокуса
-- **Неблокирующий UI** — Захват и распознавание в фоне
-- **Тёмная тема** — iOS-стиль
-- **История** — Все Q&A сохраняются
-- **Настраиваемо** — JSON конфиг, редактируется в приложении
+Десктопный помощник для собеседований. Нажми `←` или `→`, говори, отпусти — речь распознаётся офлайн и отправляется AI.
 
 ### Быстрый старт
 
