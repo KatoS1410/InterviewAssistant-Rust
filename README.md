@@ -16,7 +16,7 @@ Hold a hotkey, speak, release — the app transcribes your speech and sends it t
 - **Multiple AI providers** — OpenAI, DeepSeek, OpenRouter, Ollama (local), GigaChat, custom OpenAI-compatible endpoints
 - **Global hotkeys** — `←` (loopback/system audio) and `→` (microphone), works even when the window is not focused
 - **Non-blocking UI** — capture and recognition run in background threads, the UI stays responsive
-- **Dark glass theme** — iOS-inspired design
+- **Dark glass theme** — iOS-inspired design. I don't know your preferences, but iOS looks cool for me. 
 - **History tab** — all Q&A pairs saved for review
 - **Configurable** — JSON config file, editable in-app or manually
 
@@ -171,7 +171,7 @@ src/
 - **Несколько AI-провайдеров** — OpenAI, DeepSeek, OpenRouter, Ollama (локально), GigaChat, свой OpenAI-совместимый endpoint
 - **Глобальные хоткеи** — `←` (системный звук/loopback) и `→` (микрофон), работают даже когда окно не в фокусе
 - **Неблокирующий UI** — захват и распознавание в фоновых потоках, интерфейс не зависает
-- **Тёмная glass-тема** — дизайн в стиле iOS
+- **Тёмная glass-тема** — дизайн в стиле iOS. Не знаю кому как, а мне такое зашло.
 - **Вкладка «История»** — все пары вопрос-ответ сохраняются для просмотра
 - **Настраиваемый** — JSON-конфиг, редактируется в приложении или вручную
 
