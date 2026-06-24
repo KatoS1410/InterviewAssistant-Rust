@@ -72,6 +72,8 @@ pub struct InterviewApp {
     pub config_edit_mode: bool,
     pub ai_request_time: Option<Instant>,
     pub big_status: String,
+    /// Timestamp of last "Save" click in settings tab (for temporary toast).
+    pub settings_saved_at: Option<Instant>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -142,6 +144,7 @@ impl InterviewApp {
             config_edit_mode: false,
             ai_request_time: None,
             big_status: String::new(),
+            settings_saved_at: None,
         };
 
         app.refresh_devices();
@@ -213,7 +216,6 @@ impl InterviewApp {
         if let Err(err) = config::save(&self.cfg) {
             self.log(&format!("Save error: {err}"));
         } else {
-            self.set_status("Настройки сохранены");
             self.log("Config saved");
             self.ai.lock().unwrap().configure(self.cfg.clone());
         }

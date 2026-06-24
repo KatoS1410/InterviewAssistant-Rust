@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use crate::app::InterviewApp;
 use crate::config::PROVIDERS;
 use crate::ui::locale::Lang;
@@ -169,6 +171,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
                     ui.horizontal(|ui| {
                         if pill_button(ui, app.t("settings.save"), true, false).clicked() {
                             app.save_config();
+                            app.settings_saved_at = Some(Instant::now());
                         }
                         if pill_button(ui, app.t("settings.export"), false, false).clicked() {
                             app.export_config();
@@ -199,4 +202,22 @@ pub fn show(ui: &mut egui::Ui, app: &mut InterviewApp) {
             });
         });
     });
+
+    // Temporary toast: "Settings saved" for 2 seconds after save button click.
+    if let Some(t) = app.settings_saved_at {
+        if t.elapsed().as_secs_f64() < 2.0 {
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(200));
+            ui.horizontal(|ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(
+                        RichText::new(app.t("settings.saved"))
+                            .color(Theme::ACCENT)
+                            .strong(),
+                    );
+                });
+            });
+        } else {
+            app.settings_saved_at = None;
+        }
+    }
 }
