@@ -22,9 +22,9 @@ Hold a hotkey, speak, release — the app transcribes your speech and sends it t
 
 ### Quick Start (Windows)
 
-Windows fast installation by .exe: go [here](https://github.com/KatoS1410/InterviewAssistant-Python/releases/tag/v.1.1-rust)
+**Option A — Prebuilt .exe:** download from [Releases](https://github.com/KatoS1410/InterviewAssistant-Python/releases/tag/v.1.1-rust), run, configure VOSK model path in Settings.
 
-Windows manual installation:
+**Option B — Build from source:**
 1. **Install Rust** (if not already): https://rustup.rs
 2. **Download a VOSK model**:
    - Russian: [vosk-model-ru-0.10](https://alphacephei.com/vosk/models/vosk-model-ru-0.10.zip) (~1.4 GB)
@@ -39,6 +39,34 @@ Windows manual installation:
 5. **First launch**: go to Settings tab → click "Browse" next to VOSK model path → select the model folder → click "Reload VOSK"
 6. **Configure AI**: in Settings, set your API key, model, and endpoint
 7. **Set up audio devices**: click "Detect Loopback" and "Detect Mic", or select manually
+
+### Quick Start (Linux — Debian 12+ / Ubuntu 22.04+)
+
+**Option A — One-liner installer:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/KatoS1410/InterviewAssistant-Python/RustConversion/linux/install.sh | bash
+```
+This installs system dependencies, Rust (if needed), clones the repo, builds the binary, and creates a desktop entry.
+
+**Option B — .deb package:**
+```bash
+# Download the .deb from Releases, then:
+sudo dpkg -i interview-assistant_1.0.0_amd64.deb
+sudo apt-get install -f   # auto-install missing dependencies
+```
+
+**Option C — Manual build:**
+```bash
+# Install system dependencies first:
+sudo apt-get install -y build-essential pkg-config libasound2-dev libgtk-3-dev libx11-dev libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libwayland-dev curl git cmake
+# Then build:
+git clone -b RustConversion https://github.com/KatoS1410/InterviewAssistant-Python.git
+cd InterviewAssistant-Python
+cargo build --release
+sudo cp target/release/interview-assistant /usr/local/bin/
+```
+
+After installation, download a VOSK model, extract it, and set the path in the app's Settings tab.
 
 ### Hotkeys
 
@@ -149,9 +177,9 @@ src/
 
 ### Быстрый старт (Windows)
 
-Установка на Windows с помощью простого .exe: вам [сюда](https://github.com/KatoS1410/InterviewAssistant-Python/releases/tag/v.1.1-rust)
+**Вариант A — Готовый .exe:** скачай из [Releases](https://github.com/KatoS1410/InterviewAssistant-Python/releases/tag/v.1.1-rust), запусти, укажи путь к VOSK модели в Настройках.
 
-Установка на Windows вручную:
+**Вариант Б — Сборка из исходников:**
 1. **Установи Rust** (если ещё нет): https://rustup.rs
 2. **Скачай VOSK модель**:
    - Русская: [vosk-model-ru-0.10](https://alphacephei.com/vosk/models/vosk-model-ru-0.10.zip) (~1.4 GB)
@@ -166,6 +194,34 @@ src/
 5. **Первый запуск**: вкладка «Настройки» → нажми «Обзор» рядом с путём к VOSK модели → выбери папку с моделью → нажми «Перезагрузить VOSK»
 6. **Настрой AI**: во вкладке «Настройки» укажи API ключ, модель и endpoint
 7. **Настрой аудиоустройства**: нажми «Найти Loopback» и «Найти микрофон», или выбери вручную
+
+### Быстрый старт (Linux — Debian 12+ / Ubuntu 22.04+)
+
+**Вариант A — Установка одной командой:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/KatoS1410/InterviewAssistant-Python/RustConversion/linux/install.sh | bash
+```
+Скрипт установит системные зависимости, Rust (если нужно), склонирует репо, соберёт бинарник и создаст ярлык в меню приложений.
+
+**Вариант Б — .deb пакет:**
+```bash
+# Скачай .deb из Releases, затем:
+sudo dpkg -i interview-assistant_1.0.0_amd64.deb
+sudo apt-get install -f   # автодоустановка недостающих зависимостей
+```
+
+**Вариант В — Ручная сборка:**
+```bash
+# Сначала установи системные зависимости:
+sudo apt-get install -y build-essential pkg-config libasound2-dev libgtk-3-dev libx11-dev libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libwayland-dev curl git cmake
+# Затем собери:
+git clone -b RustConversion https://github.com/KatoS1410/InterviewAssistant-Python.git
+cd InterviewAssistant-Python
+cargo build --release
+sudo cp target/release/interview-assistant /usr/local/bin/
+```
+
+После установки скачай VOSK модель, распакуй и укажи путь в Настройках приложения.
 
 ### Хоткеи
 
