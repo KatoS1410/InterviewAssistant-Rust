@@ -1,5 +1,4 @@
-//! Localization strings for the UI.
-//! Keys are grouped by tab/context.
+//! Строки локализации UI
 
 #[derive(Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Lang {
@@ -26,8 +25,7 @@ impl Lang {
 
 }
 
-/// Returns the localized string for the given key.
-/// Falls back to Russian if key is not found.
+/// Получить локализованную строку
 pub fn t(lang: Lang, key: &str) -> &'static str {
     let entry = LOCALE.get(key).unwrap_or(&("???", "???"));
     match lang {
@@ -36,19 +34,19 @@ pub fn t(lang: Lang, key: &str) -> &'static str {
     }
 }
 
-/// All translatable strings: key → (ru, en)
+/// Все строки: ключ → (русский, английский)
 static LOCALE: phf::Map<&'static str, (&'static str, &'static str)> = phf::phf_map! {
-    // --- Tabs ---
+    // Вкладки
     "tab.main" => ("Основное", "Main"),
     "tab.history" => ("История", "History"),
     "tab.settings" => ("Настройки", "Settings"),
     "tab.logs" => ("Логи", "Logs"),
 
-    // --- Header ---
+    // Заголовок
     "header.title" => ("Interview Assistant", "Interview Assistant"),
     "header.hint" => ("[<-] loopback  [->] mic", "[<-] loopback  [->] mic"),
 
-    // --- Main tab ---
+    // Основная вкладка
     "main.transcript" => ("Транскрипт", "Transcript"),
     "main.answer" => ("Ответ AI", "AI Answer"),
     "main.ask" => ("Спросить AI", "Ask AI"),
@@ -72,14 +70,14 @@ static LOCALE: phf::Map<&'static str, (&'static str, &'static str)> = phf::phf_m
     "main.ai_request" => ("Запрос к AI...", "AI request..."),
     "main.no_text" => ("Нет текста для AI", "No text for AI"),
 
-    // --- History tab ---
+    // История
     "history.title" => ("История вопросов и ответов", "Question & Answer History"),
     "history.questions" => ("Вопросы", "Questions"),
     "history.answers" => ("Ответы", "Answers"),
     "history.clear" => ("Очистить историю", "Clear History"),
     "history.empty" => ("История пуста", "History is empty"),
 
-    // --- Settings tab ---
+    // Настройки
     "settings.ai_provider" => ("AI / Provider", "AI / Provider"),
     "settings.provider" => ("Provider", "Provider"),
     "settings.auth_key" => ("Authorization Key", "Authorization Key"),
@@ -113,11 +111,11 @@ static LOCALE: phf::Map<&'static str, (&'static str, &'static str)> = phf::phf_m
     "settings.language" => ("Язык", "Language"),
     "settings.saved" => ("Настройки сохранены", "Settings saved"),
 
-    // --- Logs tab ---
+    // Логи
     "logs.title" => ("Логи приложения", "Application Logs"),
     "logs.clear" => ("Очистить логи", "Clear Logs"),
 
-    // --- Status bar ---
+    // Строка состояния
     "status.devices" => ("Устройств:", "Devices:"),
     "status.devices_count" => ("Устройств: {}", "Devices: {}"),
     "status.recording_blocked" => ("Ошибка: VOSK не загружен", "Error: VOSK not loaded"),
@@ -125,14 +123,14 @@ static LOCALE: phf::Map<&'static str, (&'static str, &'static str)> = phf::phf_m
     "status.vosk" => ("VOSK:", "VOSK:"),
     "status.hz" => ("Hz", "Hz"),
 
-    // --- VOSK status ---
+    // Статус VOSK
     "vosk.not_loaded" => ("not loaded", "not loaded"),
     "vosk.loading" => ("loading...", "loading..."),
     "vosk.ready" => ("ready", "ready"),
     "vosk.error" => ("error", "error"),
     "vosk.no_path" => ("no model path", "no model path"),
 
-    // --- Misc ---
+    // Прочее
     "misc.browse" => ("...", "..."),
     "misc.loopback_found" => ("Loopback найден", "Loopback found"),
     "misc.loopback_not_found" => ("Loopback не найден", "Loopback not found"),
