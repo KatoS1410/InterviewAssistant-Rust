@@ -1,3 +1,5 @@
+// Всякая всячина: устройства, хелперы, сингл-инстанс, VOSK FFI.
+
 pub mod devices;
 pub mod helpers;
 pub mod single_instance;

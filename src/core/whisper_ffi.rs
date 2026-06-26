@@ -1,14 +1,14 @@
-//! FFI bindings to whisper.dll (whisper.cpp native library).
-//! Uses libloading for dynamic loading — no compile-time linking required.
+//! Привязки FFI к whisper.dll (нативная библиотека whisper.cpp).
+//! Используется libloading для динамической загрузки — линковка на этапе компиляции не нужна.
 
 use std::ffi::{c_char, c_float, c_int, CStr, CString};
 use std::path::Path;
 
 use libloading::{Library, Symbol};
 
-// Windows API: SetDllDirectoryW — adds a directory to the DLL search path.
-// whisper.dll depends on ggml.dll, SDL2.dll, parakeet.dll in the same folder.
-// SetDllDirectoryW ensures Windows finds them before LoadLibraryExW.
+// Windows API: SetDllDirectoryW — добавляет папку в пути поиска DLL.
+// whisper.dll зависит от ggml.dll, SDL2.dll, parakeet.dll в той же папке.
+// SetDllDirectoryW нужно, чтобы Windows нашла их до LoadLibraryExW.
 #[cfg(windows)]
 extern "system" {
     fn SetDllDirectoryW(lpPathName: *const u16) -> i32;
@@ -30,37 +30,37 @@ fn add_dll_directory(path: &Path) {
 #[cfg(not(windows))]
 fn add_dll_directory(_path: &Path) {}
 
-/// Opaque whisper context (holds loaded model in memory).
+/// Непрозрачный контекст whisper (держит загруженную модель в памяти).
 #[repr(C)]
 pub struct WhisperContext {
     _private: [u8; 0],
 }
 
-/// Context initialization parameters (whisper_context_params from whisper.h).
+/// Параметры инициализации контекста (whisper_context_params из whisper.h).
 ///
-/// Layout (20 bytes, confirmed via Python ctypes dump):
-///   bool use_gpu;       // offset 0  (1 byte)
-///   bool flash_attn;    // offset 1  (1 byte)
-///   // 2 bytes padding
-///   int  gpu_device;    // offset 4  (4 bytes)
-///   bool dtw;           // offset 8  (1 byte)
-///   // 3 bytes padding
-///   int  devices;       // offset 12 (4 bytes) — bitmask, NOT a pointer
-///   int  backends;      // offset 16 (4 bytes) — bitmask, NOT a pointer
-/// Total: 20 bytes.
+/// Раскладка (20 байт, проверено через Python ctypes):
+///   bool use_gpu;       // смещение 0  (1 байт)
+///   bool flash_attn;    // смещение 1  (1 байт)
+///   // 2 байта выравнивания
+///   int  gpu_device;    // смещение 4  (4 байта)
+///   bool dtw;           // смещение 8  (1 байт)
+///   // 3 байта выравнивания
+///   int  devices;       // смещение 12 (4 байта) — битовая маска, НЕ указатель
+///   int  backends;      // смещение 16 (4 байта) — битовая маска, НЕ указатель
+/// Итого: 20 байт.
 #[repr(C)]
 pub struct WhisperContextParams {
-    pub use_gpu: u8,       // offset 0
-    pub flash_attn: u8,    // offset 1
-    pub _pad1: [u8; 2],    // offset 2-3
-    pub gpu_device: c_int, // offset 4-7
-    pub dtw: u8,           // offset 8
-    pub _pad2: [u8; 3],    // offset 9-11
-    pub devices: c_int,    // offset 12-15
-    pub backends: c_int,   // offset 16-19
+    pub use_gpu: u8,       // смещение 0
+    pub flash_attn: u8,    // смещение 1
+    pub _pad1: [u8; 2],    // смещение 2-3
+    pub gpu_device: c_int, // смещение 4-7
+    pub dtw: u8,           // смещение 8
+    pub _pad2: [u8; 3],    // смещение 9-11
+    pub devices: c_int,    // смещение 12-15
+    pub backends: c_int,   // смещение 16-19
 }
 
-/// Sampling strategies for whisper.
+/// Стратегии сэмплирования для whisper.
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 pub enum WhisperSamplingStrategy {
@@ -68,7 +68,7 @@ pub enum WhisperSamplingStrategy {
     BeamSearch = 1,
 }
 
-/// Full parameters for whisper_full().
+/// Полные параметры для whisper_full().
 #[repr(C)]
 pub struct WhisperFullParams {
     pub strategy: c_int,
@@ -113,7 +113,7 @@ pub struct WhisperFullParams {
     pub n_best: c_int,
 }
 
-/// Loaded whisper.dll with function pointers.
+/// Загруженная whisper.dll с указателями на функции.
 pub struct WhisperDll {
     _lib: Library,
     pub context_default_params_by_ref:
@@ -128,37 +128,36 @@ pub struct WhisperDll {
 }
 
 impl WhisperDll {
-    /// Load whisper.dll from the given directory.
+    /// Загружает whisper.dll из указанной папки.
     pub fn load(dll_dir: &Path) -> Result<Self, String> {
         let dll_path = dll_dir.join("whisper.dll");
         if !dll_path.exists() {
             return Err(format!("whisper.dll not found at {}", dll_path.display()));
         }
 
-        // Add DLL directory to search path so whisper.dll can find its
-        // dependencies (ggml.dll, SDL2.dll, parakeet.dll) in the same folder.
-        // Must be absolute — SetDllDirectoryW requires it.
+        // Добавляем папку DLL в пути поиска, чтобы whisper.dll нашла свои
+        // зависимости (ggml.dll, SDL2.dll, parakeet.dll) в той же папке.
+        // Путь должен быть абсолютным — SetDllDirectoryW этого требует.
         let dll_dir_abs = dll_dir
             .canonicalize()
             .unwrap_or_else(|_| dll_dir.to_path_buf());
         add_dll_directory(&dll_dir_abs);
 
-        // Canonicalize DLL path to absolute — libloading uses
-        // LOAD_WITH_ALTERED_SEARCH_PATH for paths containing separators,
-        // which tells Windows to search the DLL's directory for its
-        // dependencies.
+        // Приводим путь DLL к абсолютному — libloading использует
+        // LOAD_WITH_ALTERED_SEARCH_PATH для путей с разделителями,
+        // что говорит Windows искать зависимости в папке DLL.
         let dll_path_abs = dll_path
             .canonicalize()
             .unwrap_or_else(|_| dll_path.clone());
 
-        // SAFETY: libloading loads a native library. We trust whisper.dll.
+        // БЕЗОПАСНОСТЬ: libloading грузит нативную библиотеку. Доверяем whisper.dll.
         let lib = unsafe {
             Library::new(&dll_path_abs).map_err(|e| format!("Failed to load whisper.dll: {e}"))?
         };
 
-        // SAFETY: We load symbols by their exact C names from whisper.h.
-        // The function signatures must match the C ABI exactly.
-        // We extract raw function pointers and drop Symbols before moving `lib`.
+        // БЕЗОПАСНОСТЬ: Грузим символы по точным C-именам из whisper.h.
+        // Сигнатуры функций должны точно совпадать с C ABI.
+        // Извлекаем сырые указатели и дропаем Symbols до перемещения `lib`.
         let context_default_params_by_ref: unsafe extern "C" fn(*mut WhisperContextParams) = {
             let sym: Symbol<unsafe extern "C" fn(*mut WhisperContextParams)> = unsafe {
                 lib.get(b"whisper_context_default_params_by_ref\0")
@@ -249,16 +248,16 @@ impl WhisperDll {
         })
     }
 
-    /// Initialize whisper context from a model file with CPU-only params.
-    /// The model stays loaded in memory until `free_context` is called.
+    /// Создаёт контекст whisper из файла модели с параметрами только-CPU.
+    /// Модель остаётся в памяти до вызова `free_context`.
     pub unsafe fn init_context(&self, model_path: &str) -> Result<*mut WhisperContext, String> {
         let c_path = CString::new(model_path)
             .map_err(|e| format!("Invalid model path: {e}"))?;
 
-        // Build CPU-only context params.
-        // use_gpu = 0 (false) — CPU only
-        // backends = 1 (GGML_BACKEND_TYPE_CPU bitmask)
-        // devices = 1 (at least one device must be reported)
+        // Собираем параметры контекста только-CPU.
+        // use_gpu = 0 (false) — только CPU
+        // backends = 1 (битовая маска GGML_BACKEND_TYPE_CPU)
+        // devices = 1 (хотя бы одно устройство должно быть заявлено)
         let ctx_params = WhisperContextParams {
             use_gpu: 0,
             flash_attn: 0,
@@ -280,23 +279,23 @@ impl WhisperDll {
         Ok(ctx)
     }
 
-    /// Free whisper context and unload model from memory.
+    /// Освобождает контекст whisper и выгружает модель из памяти.
     pub unsafe fn free_context(&self, ctx: *mut WhisperContext) {
         if !ctx.is_null() {
             (self.free)(ctx);
         }
     }
 
-    /// Create default params for whisper_full().
-    /// whisper_full_default_params_by_ref fills the struct by pointer (void return).
+    /// Создаёт параметры по умолчанию для whisper_full().
+    /// whisper_full_default_params_by_ref заполняет структуру по указателю (возвращает void).
     pub unsafe fn default_params(&self, strategy: WhisperSamplingStrategy) -> WhisperFullParams {
         let mut params: WhisperFullParams = std::mem::zeroed();
         (self.full_default_params)(strategy as c_int, &mut params);
         params
     }
 
-    /// Run inference on audio samples.
-    /// Returns 0 on success, non-zero on error.
+    /// Запускает инференс на звуковых образцах.
+    /// Возвращает 0 при успехе, не ноль при ошибке.
     pub unsafe fn run_full(
         &self,
         ctx: *mut WhisperContext,
@@ -310,12 +309,12 @@ impl WhisperDll {
         Ok(ret)
     }
 
-    /// Get number of segments after successful whisper_full().
+    /// Возвращает количество сегментов после успешного whisper_full().
     pub unsafe fn n_segments(&self, ctx: *mut WhisperContext) -> i32 {
         (self.full_n_segments)(ctx) as i32
     }
 
-    /// Get text of a segment by index.
+    /// Возвращает текст сегмента по индексу.
     pub unsafe fn segment_text(&self, ctx: *mut WhisperContext, index: i32) -> String {
         let ptr = (self.full_get_segment_text)(ctx, index as c_int);
         if ptr.is_null() {
@@ -325,7 +324,7 @@ impl WhisperDll {
     }
 }
 
-/// Convert i16 audio samples to f32 (required by whisper).
+/// Преобразует i16 образцы звука в f32 (нужно для whisper).
 pub fn i16_to_f32(samples: &[i16]) -> Vec<f32> {
     samples
         .iter()

@@ -19,12 +19,10 @@ use crate::ui::locale::{self, Lang};
 use crate::ui::theme::{apply_theme, draw_header, Theme};
 use egui::Color32;
 
-/// Максимум строк в логах. Старые строки удаляются, чтобы `logs` не рос
-/// бесконечно и не съедал память при долгой работе приложения.
+/// Предел строк в логах (старые строки вырезаются, чтобы не жрать память).
 const MAX_LOG_LINES: usize = 5000;
 
-/// Максимум записей в истории вопросов/ответов AI.
-/// Запись = один вопрос или ответ (разделитель между записями — `\n\n`).
+/// Предел записей в истории вопросов/ответов (одна запись = вопрос или ответ).
 const MAX_HISTORY_ENTRIES: usize = 500;
 
 pub struct InterviewApp {
@@ -72,15 +70,14 @@ pub struct InterviewApp {
     auto_ask_deadline: Option<Instant>,
     awaiting_transcript: bool,
     ai_busy: bool,
-    /// True when stop was requested but the capture thread is still
-    /// collecting the loopback tail (non-blocking stop).
+    /// Флаг: остановка запрошена, но поток ещё собирает хвост loopback (неблокирующая остановка).
     stopping: bool,
 
     // UI state
     pub config_edit_mode: bool,
     pub ai_request_time: Option<Instant>,
     pub big_status: String,
-    /// Timestamp of last "Save" click in settings tab (for temporary toast).
+    /// Время последнего нажатия «Сохранить» в настройках (для временной плашки).
     pub settings_saved_at: Option<Instant>,
 }
 
@@ -161,7 +158,7 @@ impl InterviewApp {
         app
     }
 
-    /// Get localized string by key.
+    /// Взять строку локализации по ключу.
     pub fn t(&self, key: &str) -> &'static str {
         locale::t(self.lang, key)
     }
@@ -169,7 +166,7 @@ impl InterviewApp {
     pub fn log(&mut self, msg: &str) {
         let line = format!("[{}] {msg}\n", timestamp());
         self.logs.push_str(&line);
-        // Не даём логам расти бесконечно — оставляем последние N строк.
+        // Обрезаем логи до последних N строк (чтобы не росли бесконечно).
         trim_lines(&mut self.logs, MAX_LOG_LINES);
     }
 
@@ -263,9 +260,9 @@ impl InterviewApp {
     }
 
     pub fn refresh_config_preview(&mut self) {
-        // Обычный to_string (без pretty) в несколько раз быстрее.
-        // Для preview в настройках читаемость менее важна, чем скорость:
-        // refresh_config_preview вызывается при каждом save/detect_device.
+        // Обычный to_string (без pretty) работает в разы быстрее.
+        // Для превью в настройках скорость важнее читаемости:
+        // refresh_config_preview дёргается при каждом save/detect_device.
         self.config_preview = serde_json::to_string(&self.cfg).unwrap_or_default();
     }
 
@@ -275,7 +272,7 @@ impl InterviewApp {
         self.cfg.tail_ms = to_int(&self.tail_ms_text, 6000).max(0) as u32;
     }
 
-    /// Загрузка VOSK модели из указанного в конфиге пути.
+    /// Загружает VOSK-модель из пути, указанного в конфиге.
     pub fn load_vosk(&mut self) {
         let path = self.cfg.vosk_model_path.clone();
         if path.is_empty() {
@@ -297,7 +294,7 @@ impl InterviewApp {
         self.log(&format!("VOSK load started: {path}"));
     }
 
-    /// Выбор папки с VOSK моделью через диалог (только устанавливает путь).
+    /// Открывает диалог выбора папки с VOSK-моделью (только прописывает путь).
     pub fn browse_vosk_model(&mut self) {
         if let Some(dir) = rfd::FileDialog::new().pick_folder() {
             self.cfg.vosk_model_path = dir.display().to_string();
@@ -335,7 +332,7 @@ impl InterviewApp {
             self.set_status(self.t("main.no_text"));
             return;
         }
-        // Сохраняем предыдущий вопрос и ответ для кнопок истории.
+        // Запоминаем предыдущий вопрос и ответ (для кнопок истории).
         if self.prev_question != q {
             self.prev_question = self.question.clone();
         }
@@ -360,7 +357,7 @@ impl InterviewApp {
         if self.recording {
             return;
         }
-        // Проверяем, что VOSK загружен.
+        // Проверяем, загружен ли VOSK.
         if !self.transcriber.is_loaded() && !self.transcriber.is_loading() {
             self.big_status = self.t("main.vosk_not_loaded").to_string();
             self.set_status(self.t("status.recording_blocked"));
@@ -370,7 +367,7 @@ impl InterviewApp {
         self.save_config();
         self.sync_numeric_fields();
         self.audio_buffer.clear();
-        // Clear transcript for new question (C# approach: replace, don't accumulate).
+        // Очищаем транскрипт для нового вопроса (как в C# версии: заменяем, а не дополняем).
         self.transcript.clear();
 
         let device = match mode {
@@ -406,9 +403,9 @@ impl InterviewApp {
         if !self.recording {
             return;
         }
-        // Non-blocking: signal the capture thread to stop.
-        // The thread will continue for TAIL_MS to collect the loopback tail.
-        // Drain + recognize happens in poll_channels() when is_active() becomes false.
+        // Неблокирующая остановка: только даём сигнал потоку захвата.
+        // Поток ещё покрутится TAIL_MS, собирая хвост loopback.
+        // Слив буфера + распознавание — в poll_channels(), когда is_active() станет false.
         self.audio.stop();
         self.recording = false;
         self.stopping = true;
@@ -445,9 +442,9 @@ impl InterviewApp {
     }
 
     fn poll_channels(&mut self) {
-        // --- Non-blocking stop completion ---
-        // When the capture thread finishes (after TAIL_MS), drain remaining
-        // chunks and feed the entire buffer to VOSK.
+        // --- Завершение неблокирующей остановки ---
+        // Когда поток захвата закончил (после TAIL_MS), сливаем остатки
+        // и скармливаем весь буфер VOSK'у.
         if self.stopping && !self.audio.is_active() {
             self.stopping = false;
 
@@ -457,12 +454,12 @@ impl InterviewApp {
                 None => "AUDIO",
             };
 
-            // Drain all remaining audio chunks into our buffer.
+            // Сливаем все оставшиеся аудио-куски в буфер.
             while let Ok(chunk) = self.audio_rx.try_recv() {
                 self.audio_buffer.extend_from_slice(&chunk);
             }
 
-            // Feed the entire buffer to VOSK in one pass (C# approach).
+            // Скармливаем весь буфер VOSK'у за один проход (как в C# версии).
             if !self.audio_buffer.is_empty() {
                 self.transcriber.recognize(&self.audio_buffer, source);
             }
@@ -474,12 +471,12 @@ impl InterviewApp {
             self.set_status(self.t("main.stopped"));
             self.log("Recording stopped (tail collected)");
 
-            // Wait for final transcript, then auto-ask AI.
+            // Ждём финальный транскрипт, потом авто-отправка в AI.
             self.awaiting_transcript = true;
         }
 
-        // Accumulate audio chunks into buffer during recording.
-        // No streaming to VOSK — entire buffer is fed at stop (C# approach).
+        // Копим аудио-куски в буфер во время записи.
+        // В VOSK не стримим — весь буфер отдаётся при остановке (как в C# версии).
         while let Ok(chunk) = self.audio_rx.try_recv() {
             self.audio_buffer.extend_from_slice(&chunk);
         }
@@ -494,7 +491,7 @@ impl InterviewApp {
         while let Ok(event) = self.ai_rx.try_recv() {
             match event {
                 AiEvent::Answer(text) => {
-                    // Сохраняем в историю
+                    // Пишем в историю.
                     if !self.question.is_empty() {
                         if !self.history_questions.is_empty() {
                             self.history_questions.push(crate::core::helpers::ENTRY_SEP);
@@ -507,7 +504,7 @@ impl InterviewApp {
                         }
                         self.history_answers.push_str(&text);
                     }
-                    // Ограничиваем размер истории, чтобы не копить память.
+                    // Обрезаем историю, чтобы не копилась память.
                     trim_entries(&mut self.history_questions, MAX_HISTORY_ENTRIES);
                     trim_entries(&mut self.history_answers, MAX_HISTORY_ENTRIES);
                     self.answer = text;
@@ -516,7 +513,7 @@ impl InterviewApp {
                     self.log("AI request completed");
                 }
                 AiEvent::Error(err) => {
-                    // Сохраняем неотвеченный вопрос в историю с пометкой ошибки
+                    // Пишем неотвеченный вопрос в историю с пометкой ошибки.
                     if !self.question.is_empty() {
                         if !self.history_questions.is_empty() {
                             self.history_questions.push(crate::core::helpers::ENTRY_SEP);
@@ -527,10 +524,10 @@ impl InterviewApp {
                         self.history_answers.push(crate::core::helpers::ENTRY_SEP);
                     }
                     self.history_answers.push_str(&format!("[ОШИБКА] {err}"));
-                    // Ограничиваем размер истории, чтобы не копить память.
+                    // Обрезаем историю, чтобы не копилась память.
                     trim_entries(&mut self.history_questions, MAX_HISTORY_ENTRIES);
                     trim_entries(&mut self.history_answers, MAX_HISTORY_ENTRIES);
-                    // НЕ затираем answer — сохраняем последний успешный ответ.
+                    // answer не затираем — оставляем последний успешный ответ.
                     // Ошибку показываем в last_error (под правым окном).
                     self.last_error = format!("{}: {err}", self.t("main.ai_error"));
                     self.big_status.clear();
@@ -542,7 +539,7 @@ impl InterviewApp {
             self.ai_request_time = None;
         }
 
-        // Таймаут: если нет ответа 5 секунд — показываем предупреждение.
+        // Таймаут: если ответа нет 5 секунд — показываем предупреждение.
         if self.ai_busy {
             if let Some(start) = self.ai_request_time {
                 if start.elapsed() >= Duration::from_secs(5) {
@@ -645,8 +642,8 @@ impl eframe::App for InterviewApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        // Даём VOSK-воркеру фору на graceful cleanup до того,
-        // как начнётся Drop с таймаутом 3 секунды.
+        // Даём VOSK-воркеру время на аккуратную очистку до того,
+        // как сработает Drop с таймаутом 3 секунды.
         self.transcriber.unload();
         self.audio.stop();
     }

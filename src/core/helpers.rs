@@ -6,11 +6,10 @@ pub fn to_int(value: &str, default: i32) -> i32 {
     value.trim().parse().unwrap_or(default)
 }
 
-/// Ограничивает количество строк в `s` до `max_lines`, удаляя самые старые
-/// (первые) строки. Разделителем считается `\n`. Если строк не больше лимита,
-/// строка не меняется.
+/// Обрезает строки в `s` до `max_lines`, выкидывая самые старые (верхние).
+/// Разделитель — `\n`. Если строк в пределах лимита — ничего не делает.
 ///
-/// Используется для логов, чтобы они не росли бесконечно.
+/// Нужна для логов, чтобы не раздувались бесконечно.
 pub fn trim_lines(s: &mut String, max_lines: usize) {
     let total_newlines = s.bytes().filter(|&b| b == b'\n').count();
     let total_lines = total_newlines + 1;
@@ -37,11 +36,11 @@ pub fn trim_lines(s: &mut String, max_lines: usize) {
     }
 }
 
-/// Разделитель записей в истории. Невидимый символ PARAGRAPH SEPARATOR (U+2029),
-/// который не встречается в тексте AI (в отличие от `\n\n`).
+/// Разделитель записей в истории — невидимый PARAGRAPH SEPARATOR (U+2029).
+/// В тексте AI такой символ не попадается (в отличие от `\n\n`).
 pub const ENTRY_SEP: char = '\u{2029}';
 
-/// Ограничивает количество записей в `s`, разделённых `ENTRY_SEP`.
+/// Обрезает записи в `s` (разделённые `ENTRY_SEP`) до `max_entries`.
 pub fn trim_entries(s: &mut String, max_entries: usize) {
     if s.is_empty() {
         return;

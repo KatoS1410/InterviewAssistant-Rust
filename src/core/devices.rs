@@ -1,5 +1,8 @@
+// Поиск и выбор аудиоустройств через cpal.
+
 use cpal::traits::{DeviceTrait, HostTrait};
 
+// Инфа об аудиоустройстве.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AudioDeviceInfo {
     pub index: usize,
@@ -8,6 +11,7 @@ pub struct AudioDeviceInfo {
     pub is_output: bool,
 }
 
+// Ключевые слова, по которым ищем loopback-устройство.
 const LOOPBACK_KEYWORDS: &[&str] = &[
     "loopback",
     "stereo mix",
@@ -26,6 +30,7 @@ const LOOPBACK_KEYWORDS: &[&str] = &[
     "monitor",
 ];
 
+// Собирает список всех устройств ввода (на Windows ещё и выводные с пометкой [loopback]).
 pub fn list_input_devices() -> Vec<AudioDeviceInfo> {
     let host = cpal::default_host();
     let mut devices = Vec::new();
@@ -74,23 +79,27 @@ pub fn list_input_devices() -> Vec<AudioDeviceInfo> {
     devices
 }
 
+// Ищет loopback-устройство по ключевым словам.
 pub fn find_loopback_device() -> Option<AudioDeviceInfo> {
     list_input_devices()
         .into_iter()
         .find(|d| is_loopback_name(&d.name))
 }
 
+// Ищет микрофон (не loopback).
 pub fn find_mic_device() -> Option<AudioDeviceInfo> {
     list_input_devices()
         .into_iter()
         .find(|d| is_mic_name(&d.name))
 }
 
+// Проверяет, похоже ли имя на loopback.
 pub fn is_loopback_name(name: &str) -> bool {
     let lower = name.to_lowercase();
     LOOPBACK_KEYWORDS.iter().any(|kw| lower.contains(kw))
 }
 
+// Проверяет, похоже ли имя на микрофон.
 pub fn is_mic_name(name: &str) -> bool {
     let lower = name.to_lowercase();
     !is_loopback_name(&lower)
@@ -99,6 +108,7 @@ pub fn is_mic_name(name: &str) -> bool {
             || lower.contains("микрофон"))
 }
 
+// Ищет устройство по точному имени, если не находит — по частичному совпадению.
 pub fn resolve_device(name: &str) -> Option<AudioDeviceInfo> {
     let target = name.trim();
     if target.is_empty() {

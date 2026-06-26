@@ -1,7 +1,7 @@
 #!/bin/bash
-# Build a .deb package for Interview Assistant
-# Run this on a Debian 12 / Ubuntu 22.04+ machine after install.sh
-# Usage: chmod +x build-deb.sh && ./build-deb.sh
+# Собирает .deb пакет для Interview Assistant.
+# Запускать на Debian 12 / Ubuntu 22.04+ после install.sh.
+# Использование: chmod +x build-deb.sh && ./build-deb.sh
 set -euo pipefail
 
 GREEN='\033[0;32m'; NC='\033[0m'
@@ -15,27 +15,27 @@ BUILD_DIR="/tmp/${PKG_NAME}-deb"
 INSTALL_DIR="/opt/interview-assistant"
 BIN_NAME="interview-assistant"
 
-# ── Check that the binary exists ─────────────────────────────
+# Проверяем, что бинарник собран.
 BIN_SRC="${INSTALL_DIR}/target/release/${BIN_NAME}"
 if [ ! -f "$BIN_SRC" ]; then
-    echo "Binary not found at $BIN_SRC"
-    echo "Run install.sh first to build the project."
+    echo "Бинарник не найден: $BIN_SRC"
+    echo "Сначала запусти install.sh для сборки проекта."
     exit 1
 fi
 
-# ── Clean and create build dir ────────────────────────────────
-log "Creating package structure..."
+# Чистим и создаём сборочную папку.
+log "Создаю структуру пакета..."
 rm -rf "$BUILD_DIR"
 mkdir -p "${BUILD_DIR}/DEBIAN"
 mkdir -p "${BUILD_DIR}/usr/local/bin"
 mkdir -p "${BUILD_DIR}/usr/share/applications"
 mkdir -p "${BUILD_DIR}/usr/share/icons/hicolor/256x256/apps"
 
-# ── Copy binary ───────────────────────────────────────────────
+# Копируем бинарник.
 cp "$BIN_SRC" "${BUILD_DIR}/usr/local/bin/${BIN_NAME}"
 chmod 755 "${BUILD_DIR}/usr/local/bin/${BIN_NAME}"
 
-# ── Desktop entry ─────────────────────────────────────────────
+# Ярлык рабочего стола.
 cat > "${BUILD_DIR}/usr/share/applications/${PKG_NAME}.desktop" <<EOF
 [Desktop Entry]
 Name=Interview Assistant
@@ -48,7 +48,7 @@ Categories=Utility;Office;
 StartupWMClass=interview-assistant
 EOF
 
-# ── DEBIAN/control ────────────────────────────────────────────
+# Метаданные пакета (control).
 cat > "${BUILD_DIR}/DEBIAN/control" <<EOF
 Package: ${PKG_NAME}
 Version: ${PKG_VER}
@@ -72,15 +72,15 @@ Description: Offline speech + AI assistant for technical interviews
   - History of Q&A pairs
 EOF
 
-# ── Build .deb ────────────────────────────────────────────────
-log "Building ${DEB_NAME}..."
+# Собираем .deb.
+log "Собираю ${DEB_NAME}..."
 dpkg-deb --build "$BUILD_DIR" "$DEB_NAME"
 
-# ── Done ─────────────────────────────────────────────────────
-log "Package created: $(pwd)/${DEB_NAME}"
+# Готово.
+log "Пакет создан: $(pwd)/${DEB_NAME}"
 echo ""
-echo "Install on target machine:"
+echo "Установка на целевой машине:"
 echo "  sudo dpkg -i ${DEB_NAME}"
-echo "  sudo apt-get install -f   # if any deps are missing"
+echo "  sudo apt-get install -f   # если не хватает зависимостей"
 echo ""
-echo "Then download a VOSK model and configure the app."
+echo "Потом скачай VOSK-модель и настрой в приложении."

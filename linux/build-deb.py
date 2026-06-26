@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Build a .deb package on any platform (no dpkg-deb needed).
-Creates an ar archive with debian-binary + control.tar.gz + data.tar.gz."""
+"""Собирает .deb пакет на любой платформе (dpkg-deb не нужен).
+Создаёт ar-архив из debian-binary + control.tar.gz + data.tar.gz."""
 import os, sys, tarfile, io, struct, tempfile, shutil
 
 PKG_NAME = "interview-assistant"
@@ -10,7 +10,7 @@ DEB_NAME = f"{PKG_NAME}_{PKG_VER}_{PKG_ARCH}.deb"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def make_tar_gz(paths: dict[str, str]) -> bytes:
-    """Create a .tar.gz from {arcname: filepath_on_disk}."""
+    """Создаёт .tar.gz из словаря {arcname: путь_на_диске}."""
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         for arcname, fpath in paths.items():
@@ -18,18 +18,18 @@ def make_tar_gz(paths: dict[str, str]) -> bytes:
     return buf.getvalue()
 
 def ar_pad(data: bytes) -> bytes:
-    """Pad to even length (ar format requirement)."""
+    """Добивает до чётной длины (требование формата ar)."""
     if len(data) % 2 == 1:
         return data + b"\n"
     return data
 
 def make_ar(members: list[tuple[str, bytes]]) -> bytes:
-    """Create an ar archive. Each member: (filename, data)."""
+    """Создаёт ar-архив. Каждый элемент: (имя_файла, данные)."""
     buf = io.BytesIO()
     buf.write(b"!<arch>\n")
     for fname, data in members:
-        # ar header: 16-byte name, 12-byte mtime, 6-byte uid, 6-byte gid,
-        # 8-byte mode, 10-byte size, 2-byte magic
+        # Заголовок ar: 16 байт имя, 12 — mtime, 6 — uid, 6 — gid,
+        # 8 — права, 10 — размер, 2 — магическая сигнатура.
         size = len(data)
         header = f"{fname:<16}{0:<12}{0:<6}{0:<6}{100644:<8}{size:<10}`\n".encode("ascii")
         assert len(header) == 60, f"header len {len(header)}"
@@ -38,10 +38,10 @@ def make_ar(members: list[tuple[str, bytes]]) -> bytes:
     return buf.getvalue()
 
 def main():
-    # ── Build directory structure ─────────────────────────────
+    # Строим структуру папок пакета.
     build = tempfile.mkdtemp(prefix="deb-")
     try:
-        # DEBIAN/control
+        # Файл DEBIAN/control (метаданные пакета).
         debian_dir = os.path.join(build, "DEBIAN")
         os.makedirs(debian_dir, exist_ok=True)
         control_path = os.path.join(debian_dir, "control")
@@ -70,10 +70,10 @@ Description: Offline speech + AI assistant for technical interviews
   - History of Q&A pairs
 """)
 
-        # DEBIAN/postinst
+        # Файл DEBIAN/postinst (пост-установочный скрипт).
         postinst_path = os.path.join(debian_dir, "postinst")
         install_sh = os.path.join(SCRIPT_DIR, "install.sh")
-        # postinst just calls the bundled install.sh
+        # postinst просто вызывает вложенный install.sh.
         with open(postinst_path, "w", encoding="utf-8") as f:
             f.write("""#!/bin/bash
 set -euo pipefail
@@ -87,13 +87,13 @@ INSTALL_DIR="/opt/interview-assistant"
 BIN_NAME="interview-assistant"
 DESKTOP_FILE="/usr/share/applications/interview-assistant.desktop"
 
-log "Interview Assistant post-install setup..."
+log "Настройка после установки Interview Assistant..."
 
-# ── Rust toolchain ────────────────────────────────────────────
+# Ставим Rust.
 if command -v rustc &>/dev/null; then
-    log "Rust already installed: $(rustc --version)"
+    log "Rust уже установлен: $(rustc --version)"
 else
-    log "Installing Rust via rustup..."
+    log "Устанавливаю Rust через rustup..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
     source "$HOME/.cargo/env"
 fi
@@ -101,37 +101,37 @@ fi
 export PATH="$HOME/.cargo/bin:$PATH"
 rustup default stable 2>/dev/null || true
 
-# ── Clone / update repo ───────────────────────────────────────
+# Клонируем / обновляем репозиторий.
 if [ -d "$INSTALL_DIR/.git" ]; then
-    log "Updating existing repo..."
+    log "Обновляю существующий репозиторий..."
     cd "$INSTALL_DIR"
     git fetch origin "$BRANCH"
     git checkout "$BRANCH"
     git reset --hard "origin/$BRANCH"
 else
-    log "Cloning repo into $INSTALL_DIR..."
+    log "Клонирую репозиторий в $INSTALL_DIR..."
     mkdir -p "$INSTALL_DIR"
     git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# ── Build ─────────────────────────────────────────────────────
+# Собираем.
 cd "$INSTALL_DIR"
-log "Building release binary (this may take a few minutes)..."
+log "Собираю релизный бинарник (может занять пару минут)..."
 cargo build --release 2>&1 | tail -5
 
 BIN_PATH="$INSTALL_DIR/target/release/$BIN_NAME"
 if [ ! -f "$BIN_PATH" ]; then
-    echo "ERROR: Build failed — binary not found at $BIN_PATH"
+    echo "ОШИБКА: Сборка провалилась — бинарник не найден: $BIN_PATH"
     exit 1
 fi
 
-# ── Install binary ────────────────────────────────────────────
-log "Installing binary to /usr/local/bin/$BIN_NAME..."
+# Устанавливаем бинарник.
+log "Устанавливаю бинарник в /usr/local/bin/$BIN_NAME..."
 cp "$BIN_PATH" "/usr/local/bin/$BIN_NAME"
 chmod +x "/usr/local/bin/$BIN_NAME"
 
-# ── Desktop entry ─────────────────────────────────────────────
-log "Creating desktop entry..."
+# Ярлык рабочего стола.
+log "Создаю ярлык рабочего стола..."
 cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Name=Interview Assistant
@@ -145,27 +145,27 @@ StartupWMClass=interview-assistant
 EOF
 update-desktop-database 2>/dev/null || true
 
-# ── Done ──────────────────────────────────────────────────────
+# Готово.
 echo ""
 log "══════════════════════════════════════════════════════"
-log " Interview Assistant installed successfully!"
+log " Interview Assistant успешно установлен!"
 log "══════════════════════════════════════════════════════"
 echo ""
-warn "IMPORTANT: You still need a VOSK model for speech recognition."
-echo "  Download: https://alphacephei.com/vosk/models"
-echo "  Extract it and set the path in the app's Settings tab."
+warn "ВАЖНО: Для распознавания речи нужна VOSK-модель."
+echo "  Скачать: https://alphacephei.com/vosk/models"
+echo "  Распаковать и указать путь во вкладке Настройки."
 echo ""
-log "Launch: interview-assistant  (or find it in your app menu)"
+log "Запуск: interview-assistant  (или найди в меню приложений)"
 echo ""
 """)
         os.chmod(postinst_path, 0o755)
 
-        # ── data.tar.gz: usr/share/interview-assistant/install.sh ──
+        # data.tar.gz: usr/share/interview-assistant/install.sh
         usr_share = os.path.join(build, "usr", "share", PKG_NAME)
         os.makedirs(usr_share, exist_ok=True)
         shutil.copy2(install_sh, os.path.join(usr_share, "install.sh"))
 
-        # ── Build tar.gz members ──────────────────────────────
+        # Собираем tar.gz-члены.
         # control.tar.gz
         control_members = {}
         for f in ["control", "postinst"]:
@@ -183,7 +183,7 @@ echo ""
                 data_members[arcname] = fpath
         data_tgz = make_tar_gz(data_members)
 
-        # ── Assemble .deb (ar archive) ────────────────────────
+        # Собираем .deb (ar-архив).
         deb_content = make_ar([
             ("debian-binary", b"2.0\n"),
             ("control.tar.gz", control_tgz),
@@ -194,9 +194,9 @@ echo ""
         with open(out_path, "wb") as f:
             f.write(deb_content)
 
-        print(f"[+] Created: {out_path} ({len(deb_content)} bytes)")
-        print(f"    Install: sudo dpkg -i {DEB_NAME}")
-        print(f"    Then download a VOSK model and configure the app.")
+        print(f"[+] Создан: {out_path} ({len(deb_content)} байт)")
+        print(f"    Установка: sudo dpkg -i {DEB_NAME}")
+        print(f"    Потом скачай VOSK-модель и настрой в приложении.")
     finally:
         shutil.rmtree(build, ignore_errors=True)
 

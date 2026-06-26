@@ -1,7 +1,7 @@
 #!/bin/bash
-# make-deb.sh — create a .deb installer package on Linux
-# Usage: ./linux/make-deb.sh
-# Output: interview-assistant_1.0.1_amd64.deb
+# Собирает .deb установщик на Linux.
+# Использование: ./linux/make-deb.sh
+# На выходе: interview-assistant_1.0.1_amd64.deb
 set -euo pipefail
 
 GREEN='\033[0;32m'; NC='\033[0m'
@@ -13,20 +13,20 @@ PKG_ARCH="amd64"
 DEB_NAME="${PKG_NAME}_${PKG_VER}_${PKG_ARCH}.deb"
 BUILD_DIR="/tmp/${PKG_NAME}-deb"
 
-# ── Clean and create build dir ────────────────────────────────
-log "Creating package structure..."
+# Чистим и создаём сборочную папку.
+log "Создаю структуру пакета..."
 rm -rf "$BUILD_DIR"
 mkdir -p "${BUILD_DIR}/DEBIAN"
 mkdir -p "${BUILD_DIR}/usr/local/bin"
 mkdir -p "${BUILD_DIR}/usr/share/applications"
 mkdir -p "${BUILD_DIR}/usr/share/${PKG_NAME}"
 
-# ── Copy install script into package ──────────────────────────
+# Копируем установочный скрипт в пакет.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cp "${SCRIPT_DIR}/install.sh" "${BUILD_DIR}/usr/share/${PKG_NAME}/install.sh"
 chmod 755 "${BUILD_DIR}/usr/share/${PKG_NAME}/install.sh"
 
-# ── DEBIAN/control ────────────────────────────────────────────
+# Метаданные пакета (control).
 cat > "${BUILD_DIR}/DEBIAN/control" <<EOF
 Package: ${PKG_NAME}
 Version: ${PKG_VER}
@@ -52,7 +52,7 @@ Description: Offline speech + AI assistant for technical interviews
   - History of Q&A pairs
 EOF
 
-# ── DEBIAN/postinst ───────────────────────────────────────────
+# Пост-установочный скрипт (postinst).
 cat > "${BUILD_DIR}/DEBIAN/postinst" <<'POSTINST'
 #!/bin/bash
 set -euo pipefail
@@ -67,13 +67,13 @@ INSTALL_DIR="/opt/interview-assistant"
 BIN_NAME="interview-assistant"
 DESKTOP_FILE="/usr/share/applications/interview-assistant.desktop"
 
-log "Interview Assistant post-install setup..."
+log "Настройка после установки Interview Assistant..."
 
-# ── Rust toolchain ────────────────────────────────────────────
+# Ставим Rust.
 if command -v rustc &>/dev/null; then
-    log "Rust already installed: $(rustc --version)"
+    log "Rust уже установлен: $(rustc --version)"
 else
-    log "Installing Rust via rustup..."
+    log "Устанавливаю Rust через rustup..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
     source "$HOME/.cargo/env"
 fi
@@ -81,37 +81,37 @@ fi
 export PATH="$HOME/.cargo/bin:$PATH"
 rustup default stable 2>/dev/null || true
 
-# ── Clone / update repo ───────────────────────────────────────
+# Клонируем / обновляем репозиторий.
 if [ -d "$INSTALL_DIR/.git" ]; then
-    log "Updating existing repo..."
+    log "Обновляю существующий репозиторий..."
     cd "$INSTALL_DIR"
     git fetch origin "$BRANCH"
     git checkout "$BRANCH"
     git reset --hard "origin/$BRANCH"
 else
-    log "Cloning repo into $INSTALL_DIR..."
+    log "Клонирую репозиторий в $INSTALL_DIR..."
     mkdir -p "$INSTALL_DIR"
     git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# ── Build ─────────────────────────────────────────────────────
+# Собираем.
 cd "$INSTALL_DIR"
-log "Building release binary (this may take a few minutes)..."
+log "Собираю релизный бинарник (может занять пару минут)..."
 cargo build --release 2>&1 | tail -5
 
 BIN_PATH="$INSTALL_DIR/target/release/$BIN_NAME"
 if [ ! -f "$BIN_PATH" ]; then
-    echo "ERROR: Build failed — binary not found at $BIN_PATH"
+    echo "ОШИБКА: Сборка провалилась — бинарник не найден: $BIN_PATH"
     exit 1
 fi
 
-# ── Install binary ────────────────────────────────────────────
-log "Installing binary to /usr/local/bin/$BIN_NAME..."
+# Устанавливаем бинарник.
+log "Устанавливаю бинарник в /usr/local/bin/$BIN_NAME..."
 cp "$BIN_PATH" "/usr/local/bin/$BIN_NAME"
 chmod +x "/usr/local/bin/$BIN_NAME"
 
-# ── Desktop entry ─────────────────────────────────────────────
-log "Creating desktop entry..."
+# Ярлык рабочего стола.
+log "Создаю ярлык рабочего стола..."
 cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Name=Interview Assistant
@@ -125,29 +125,29 @@ StartupWMClass=interview-assistant
 EOF
 update-desktop-database 2>/dev/null || true
 
-# ── Done ──────────────────────────────────────────────────────
+# Готово.
 echo ""
 log "══════════════════════════════════════════════════════"
-log " Interview Assistant installed successfully!"
+log " Interview Assistant успешно установлен!"
 log "══════════════════════════════════════════════════════"
 echo ""
-warn "IMPORTANT: You still need a VOSK model for speech recognition."
-echo "  Download: https://alphacephei.com/vosk/models"
-echo "  Extract it and set the path in the app's Settings tab."
+warn "ВАЖНО: Для распознавания речи нужна VOSK-модель."
+echo "  Скачать: https://alphacephei.com/vosk/models"
+echo "  Распаковать и указать путь во вкладке Настройки."
 echo ""
-log "Launch: interview-assistant  (or find it in your app menu)"
+log "Запуск: interview-assistant  (или найди в меню приложений)"
 echo ""
 POSTINST
 chmod 755 "${BUILD_DIR}/DEBIAN/postinst"
 
-# ── Build .deb ────────────────────────────────────────────────
-log "Building ${DEB_NAME}..."
+# Собираем .deb.
+log "Собираю ${DEB_NAME}..."
 dpkg-deb --build "$BUILD_DIR" "$DEB_NAME"
 
-# ── Done ─────────────────────────────────────────────────────
-log "Package created: $(pwd)/${DEB_NAME}"
+# Готово.
+log "Пакет создан: $(pwd)/${DEB_NAME}"
 echo ""
-echo "Install on target machine:"
+echo "Установка на целевой машине:"
 echo "  sudo dpkg -i ${DEB_NAME}"
 echo ""
-echo "Then download a VOSK model and configure the app."
+echo "Потом скачай VOSK-модель и настрой в приложении."

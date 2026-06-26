@@ -1,29 +1,29 @@
-//! Audio capture service using cpal (WASAPI on Windows).
+//! Захват звука через cpal (WASAPI на Windows).
 //!
-//! Supports two modes:
-//! - Loopback: captures system audio output (what you hear).
-//! - Mic: captures microphone input.
+//! Два режима:
+//! - Loopback: захват системного вывода (то, что слышно в колонках).
+//! - Mic: захват с микрофона.
 //!
-//! Architecture:
-//! - Recording runs on a dedicated thread ("audio-capture").
-//! - Audio is downmixed to mono, resampled to 16kHz, and sent in chunks
-//!   via a crossbeam channel to the main thread.
-//! - The main thread accumulates chunks into a buffer; on stop, the entire
-//!   buffer is fed to VOSK in one pass.
+//! Как устроено:
+//! - Запись крутится в отдельном потоке ("audio-capture").
+//! - Звук сводится в моно, передискретизируется в 16 кГц и шлётся кусками
+//!   через crossbeam-канал в главный поток.
+//! - Главный поток копит куски в буфер; при остановке весь буфер
+//!   отдаётся VOSK'у за один проход.
 //!
-//! Loopback tail capture:
-//! - When recording stops, the capture thread waits TAIL_MS milliseconds
-//!   before dropping the WASAPI stream. This gives the driver time to
-//!   deliver the last audio buffers. Without this pause, the final
-//!   ~100-200ms of audio is lost inside the driver.
-//! - After the stream is dropped, any remaining samples in the internal
-//!   accumulation buffer are flushed to the channel.
+//! Сбор хвоста loopback:
+//! - При остановке записи поток захвата ждёт TAIL_MS миллисекунд
+//!   перед дропом WASAPI-потока. Это даёт драйверу время доставить
+//!   последние звуковые буферы. Без этой паузы финальные
+//!   ~100-200 мс звука теряются внутри драйвера.
+//! - После дропа потока остатки из внутреннего буфера накопления
+//!   сливаются в канал.
 //!
-//! Non-blocking stop:
-//! - `stop()` only sets the stop flag and returns immediately.
-//! - The capture thread finishes on its own (sleep + flush + cleanup).
-//! - The main thread polls `is_active()` to know when the thread has exited
-//!   and all tail audio has been delivered.
+//! Неблокирующая остановка:
+//! - `stop()` только ставит флаг остановки и сразу возвращается.
+//! - Поток захвата заканчивает сам (сон + слив + очистка).
+//! - Главный поток опрашивает `is_active()`, чтобы понять, что поток
+//!   вышел и весь хвостовой звук доставлен.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -38,15 +38,15 @@ use parking_lot::Mutex;
 use crate::core::devices::{is_loopback_name, resolve_device, AudioDeviceInfo};
 
 // ---------------------------------------------------------------------------
-// Constants
+// Константы
 // ---------------------------------------------------------------------------
 
-/// Target sample rate for VOSK recognition (16kHz mono).
+/// Целевая частота дискретизации для VOSK (16 кГц моно).
 pub const SAMPLE_RATE: u32 = 16000;
 
 
 // ---------------------------------------------------------------------------
-// AudioMode
+// Режим захвата звука
 // ---------------------------------------------------------------------------
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -56,21 +56,21 @@ pub enum AudioMode {
 }
 
 // ---------------------------------------------------------------------------
-// AudioRecorder
+// AudioRecorder — управляет захватом звука в фоновом потоке
 // ---------------------------------------------------------------------------
 
-/// Manages audio capture on a background thread.
+/// Управляет захватом звука в фоновом потоке.
 ///
-/// # Non-blocking stop
+/// # Неблокирующая остановка
 ///
-/// `stop()` sets the stop flag and returns immediately. The capture thread
-/// continues running for TAIL_MS to collect the loopback tail, then exits.
-/// Call `is_active()` to check whether the thread has finished.
+/// `stop()` ставит флаг остановки и сразу возвращается. Поток захвата
+/// продолжает крутиться TAIL_MS для сбора хвоста loopback, затем выходит.
+/// Дёргай `is_active()`, чтобы проверить, закончил ли поток.
 pub struct AudioRecorder {
     stop_flag: Arc<AtomicBool>,
     active: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
-    /// Internal accumulation buffer shared with the capture callback.
+    /// Внутренний буфер накопления, общий с колбэком захвата.
     audio_buffer: Arc<Mutex<Vec<i16>>>,
 }
 
@@ -84,16 +84,16 @@ impl AudioRecorder {
         }
     }
 
-    /// True while the capture thread is running (including the tail wait).
+    /// true, пока поток захвата крутится (включая ожидание хвоста).
     pub fn is_active(&self) -> bool {
         self.active.load(Ordering::SeqCst)
     }
 
-    /// Start capturing audio from the given device.
+    /// Запускает захват звука с указанного устройства.
     ///
-    /// `chunk_ms` controls how often audio chunks are sent to `tx`.
-    /// `tail_ms` is the delay after stop to collect the loopback tail.
-    /// If a recording is already in progress, it is stopped first.
+    /// `chunk_ms` — как часто слать аудио-куски в `tx`.
+    /// `tail_ms` — задержка после остановки для сбора хвоста loopback.
+    /// Если запись уже идёт — сначала останавливает.
     pub fn start(
         &mut self,
         mode: AudioMode,
@@ -131,18 +131,18 @@ impl AudioRecorder {
         Ok(())
     }
 
-    /// Signal the capture thread to stop. Returns immediately.
+    /// Даёт сигнал потоку захвата остановиться. Возвращается сразу.
     ///
-    /// The thread will continue for TAIL_MS to collect the loopback tail,
-    /// then flush remaining samples and exit. Use `is_active()` to know
-    /// when it has fully stopped.
+    /// Поток ещё покрутится TAIL_MS для сбора хвоста loopback,
+    /// потом сольёт остатки и выйдет. Используй `is_active()`, чтобы
+    /// понять, когда он полностью остановился.
     pub fn stop(&mut self) {
         self.stop_flag.store(true, Ordering::SeqCst);
-        // Detach the thread handle — it will finish on its own.
-        // We don't join here to avoid blocking the UI thread.
+        // Отсоединяем ручку потока — он закончит сам.
+        // Не делаем join здесь, чтобы не блокировать UI-поток.
         if let Some(handle) = self.thread.take() {
-            // Spawn a tiny reaper thread that just joins the old handle
-            // so we don't leak OS resources.
+            // Запускаем крошечный поток-уборщик, который просто
+            // джойнит старую ручку, чтобы не утекали ресурсы ОС.
             thread::Builder::new()
                 .name("audio-reaper".into())
                 .spawn(move || {
@@ -169,10 +169,10 @@ impl Drop for AudioRecorder {
 }
 
 // ---------------------------------------------------------------------------
-// Device selection
+// Выбор устройства
 // ---------------------------------------------------------------------------
 
-/// Pick the audio device: by name if provided, otherwise auto-detect based on mode.
+/// Выбирает аудиоустройство: по имени если задано, иначе автоопределение по режиму.
 fn pick_device(mode: AudioMode, device_name: &str) -> Result<AudioDeviceInfo> {
     if !device_name.trim().is_empty() {
         if let Some(dev) = resolve_device(device_name) {
@@ -194,11 +194,11 @@ fn pick_device(mode: AudioMode, device_name: &str) -> Result<AudioDeviceInfo> {
 }
 
 // ---------------------------------------------------------------------------
-// Capture loop (runs on audio-capture thread)
+// Цикл захвата (крутится в потоке audio-capture)
 // ---------------------------------------------------------------------------
 
-/// Main capture loop. Opens the device, starts the stream, waits for the stop
-/// flag, then collects the loopback tail and flushes remaining samples.
+/// Главный цикл захвата. Открывает устройство, запускает поток, ждёт флага
+/// остановки, затем собирает хвост loopback и сливает остатки.
 fn capture_loop(
     device_info: AudioDeviceInfo,
     mode: AudioMode,
@@ -236,17 +236,17 @@ fn capture_loop(
 
     stream.play()?;
 
-    // Wait until the main thread signals us to stop.
+    // Ждём, пока главный поток не даст сигнал остановки.
     while !stop_flag.load(Ordering::SeqCst) {
         thread::sleep(std::time::Duration::from_millis(20));
     }
 
-    // --- Loopback tail collection ---
-    // Keep the stream alive for tail_ms so WASAPI delivers the final buffers.
+    // --- Сбор хвоста loopback ---
+    // Держим поток живым ещё tail_ms, чтобы WASAPI доставил последние буферы.
     thread::sleep(std::time::Duration::from_millis(tail_ms as u64));
     drop(stream);
 
-    // Flush any samples still sitting in the accumulation buffer.
+    // Сливаем остатки из буфера накопления.
     {
         let mut buf = buffer.lock();
         if !buf.is_empty() {
@@ -259,7 +259,7 @@ fn capture_loop(
 }
 
 // ---------------------------------------------------------------------------
-// cpal device / stream helpers
+// Вспомогательные функции для cpal (устройства / потоки)
 // ---------------------------------------------------------------------------
 
 fn open_cpal_device(
@@ -267,7 +267,7 @@ fn open_cpal_device(
     info: &AudioDeviceInfo,
     mode: AudioMode,
 ) -> Result<cpal::Device> {
-    // Loopback devices are opened as output devices on Windows.
+    // Loopback-устройства на Windows открываются как устройства вывода.
     if info.is_output || matches!(mode, AudioMode::Loopback) || is_loopback_name(&info.name) {
         #[cfg(windows)]
         {
@@ -283,7 +283,7 @@ fn open_cpal_device(
         }
     }
 
-    // Fallback: search input devices.
+    // Запасной вариант: ищем среди устройств ввода.
     if let Ok(inputs) = host.input_devices() {
         for device in inputs {
             if device.name().ok().as_deref() == Some(info.name.as_str()) {
@@ -311,10 +311,10 @@ fn pick_stream_config(
 }
 
 // ---------------------------------------------------------------------------
-// Audio processing: downmix → resample → chunk
+// Обработка звука: downmix → resample → chunk
 // ---------------------------------------------------------------------------
 
-/// Downmix multi-channel interleaved i16 to mono by averaging channels.
+/// Сводит многоканальный i16 в моно усреднением каналов.
 fn downmix_to_mono_i16(samples: &[i16], channels: usize) -> Vec<i16> {
     if channels <= 1 {
         return samples.to_vec();
@@ -328,7 +328,7 @@ fn downmix_to_mono_i16(samples: &[i16], channels: usize) -> Vec<i16> {
         .collect()
 }
 
-/// Linear resampling from `from_rate` to `to_rate`.
+/// Линейная передискретизация из `from_rate` в `to_rate`.
 fn resample_linear(input: &[i16], from_rate: u32, to_rate: u32) -> Vec<i16> {
     if from_rate == to_rate || input.is_empty() {
         return input.to_vec();
@@ -346,8 +346,8 @@ fn resample_linear(input: &[i16], from_rate: u32, to_rate: u32) -> Vec<i16> {
     out
 }
 
-/// Process raw audio from the stream callback:
-/// downmix → resample → accumulate → emit chunks when block_size is reached.
+/// Обрабатывает сырой звук из колбэка потока:
+/// downmix → resample → накопление → выдача кусков при достижении block_size.
 fn emit_chunk(
     raw: Vec<i16>,
     channels: usize,
@@ -368,7 +368,7 @@ fn emit_chunk(
 }
 
 // ---------------------------------------------------------------------------
-// Stream builders (one per sample format)
+// Сборщики потоков (по одному на формат сэмплов)
 // ---------------------------------------------------------------------------
 
 fn build_i16_stream(

@@ -1,20 +1,27 @@
+// Глобальные горячие клавиши (стрелка влево — loopback, стрелка вправо — микрофон).
+// Работают даже когда окно не в фокусе.
+
 use crossbeam_channel::Sender;
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
 use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
 
+// Действия, которые прилетают от горячих клавиш.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HotkeyAction {
-    LoopbackPress,
-    LoopbackRelease,
-    MicPress,
-    MicRelease,
+    LoopbackPress,   // стрелка влево нажата
+    LoopbackRelease, // стрелка влево отпущена
+    MicPress,        // стрелка вправо нажата
+    MicRelease,      // стрелка вправо отпущена
 }
 
+// Сервис горячих клавиш. Держит менеджер, пока жив.
 pub struct HotkeyService {
     _manager: GlobalHotKeyManager,
 }
 
 impl HotkeyService {
+    // Регистрирует стрелку влево и стрелку вправо как глобальные хоткеи.
+    // Запускает отдельный поток, который слушает события и шлёт их в канал tx.
     pub fn install(tx: Sender<HotkeyAction>) -> anyhow::Result<Self> {
         let manager = GlobalHotKeyManager::new()?;
         let left = HotKey::new(Some(Modifiers::empty()), Code::ArrowLeft);

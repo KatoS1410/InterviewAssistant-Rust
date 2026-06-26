@@ -1,10 +1,10 @@
-//! FFI bindings to VOSK speech recognition library (libvosk.dll / vosk.dll).
-//! Uses libloading for dynamic loading — no compile-time linking required.
+//! Привязки FFI к библиотеке распознавания речи VOSK (libvosk.dll / vosk.dll).
+//! Используется libloading для динамической загрузки — линковка на этапе компиляции не нужна.
 //!
-//! VOSK API reference: https://alphacephei.com/vosk/adaptation
+//! Документация VOSK API: https://alphacephei.com/vosk/adaptation
 //!
-//! If vosk.dll is not found locally, it is auto-downloaded from GitHub releases
-//! and placed into the model directory.
+//! Если vosk.dll не найдена локально, она скачивается автоматически с GitHub Releases
+//! и кладётся в папку с моделью.
 
 use std::ffi::{c_char, c_float, c_int, c_short, CStr, CString};
 use std::io;
@@ -12,10 +12,10 @@ use std::path::{Path, PathBuf};
 
 use libloading::{Library, Symbol};
 
-/// Load a DLL with full dependency resolution.
-/// On Windows, uses LoadLibraryExW with LOAD_WITH_ALTERED_SEARCH_PATH
-/// so that dependent DLLs (libstdc++-6.dll, etc.) are found in the DLL's directory.
-/// On other platforms, delegates to libloading::Library::new.
+/// Загружает DLL с полным разрешением зависимостей.
+/// На Windows используется LoadLibraryExW с LOAD_WITH_ALTERED_SEARCH_PATH,
+/// чтобы зависимые DLL (libstdc++-6.dll и т.д.) искались в папке с DLL.
+/// На других платформах — обычный libloading::Library::new.
 fn load_library_with_deps(path: &Path) -> Result<Library, String> {
     #[cfg(windows)]
     {
@@ -26,8 +26,8 @@ fn load_library_with_deps(path: &Path) -> Result<Library, String> {
             .chain(std::iter::once(0))
             .collect();
         // LOAD_WITH_ALTERED_SEARCH_PATH = 0x8:
-        //   If path is absolute, search the DLL's directory for dependencies first,
-        //   then fall back to standard system paths.
+        //   Если путь абсолютный — сначала ищем зависимости в папке DLL,
+        //   потом уже по стандартным системным путям.
         const LOAD_WITH_ALTERED_SEARCH_PATH: u32 = 0x8;
         let handle = unsafe {
             windows_sys::Win32::System::LibraryLoader::LoadLibraryExW(
@@ -42,18 +42,18 @@ fn load_library_with_deps(path: &Path) -> Result<Library, String> {
                 path.display()
             ));
         }
-        // SAFETY: handle is a valid HMODULE from LoadLibraryExW.
-        // libloading will call FreeLibrary on drop.
+        // БЕЗОПАСНОСТЬ: handle — валидный HMODULE из LoadLibraryExW.
+        // libloading вызовет FreeLibrary при дропе.
         use libloading::os::windows::Library as WindowsLibrary;
         let win_lib = unsafe { WindowsLibrary::from_raw(handle as isize) };
         Ok(win_lib.into())
     }
     #[cfg(not(windows))]
     {
-        // On Linux/macOS, dlopen searches for dependent .so in LD_LIBRARY_PATH,
-        // RPATH, and system paths — but NOT in the loaded library's directory.
-        // Temporarily prepend the library's directory to LD_LIBRARY_PATH
-        // so that bundled dependencies (e.g., libvosk.so's dependencies) are found.
+        // На Linux/macOS dlopen ищет зависимые .so в LD_LIBRARY_PATH,
+        // RPATH и системных путях — но НЕ в папке загружаемой библиотеки.
+        // Временно добавляем папку библиотеки в начало LD_LIBRARY_PATH,
+        // чтобы нашлись bundled-зависимости (например, зависимости libvosk.so).
         let lib_dir = path
             .parent()
             .and_then(|p| p.to_str())
@@ -70,7 +70,7 @@ fn load_library_with_deps(path: &Path) -> Result<Library, String> {
             Library::new(path).map_err(|e| format!("Library::new failed: {e}"))
         };
 
-        // Restore original LD_LIBRARY_PATH.
+        // Восстанавливаем исходный LD_LIBRARY_PATH.
         if old_ld_path.is_empty() {
             std::env::remove_var("LD_LIBRARY_PATH");
         } else {
@@ -82,19 +82,19 @@ fn load_library_with_deps(path: &Path) -> Result<Library, String> {
 }
 
 
-/// Opaque VOSK model (loaded from model directory).
+/// Непрозрачная VOSK-модель (загружена из папки с моделью).
 #[repr(C)]
 pub struct VoskModel {
     _private: [u8; 0],
 }
 
-/// Opaque VOSK recognizer (created from a model, processes audio).
+/// Непрозрачный VOSK-распознаватель (создаётся из модели, обрабатывает звук).
 #[repr(C)]
 pub struct VoskRecognizer {
     _private: [u8; 0],
 }
 
-/// Loaded VOSK DLL with function pointers.
+/// Загруженная VOSK DLL с указателями на функции.
 pub struct VoskDll {
     _lib: Library,
     pub model_new: unsafe extern "C" fn(*const c_char) -> *mut VoskModel,
@@ -109,15 +109,15 @@ pub struct VoskDll {
 }
 
 impl VoskDll {
-    /// Load VOSK DLL. If not found locally, auto-downloads from GitHub.
-    /// Searches in: model dir, parent dir, exe dir, cwd, whisper_model/.
+    /// Загружает VOSK DLL. Если не найдена локально — качает с GitHub.
+    /// Ищет в: папке модели, родительской папке, папке exe, cwd, whisper_model/.
     pub fn load(model_dir: &Path) -> Result<Self, String> {
-        // First, try to find DLL locally.
+        // Сначала пробуем найти DLL локально.
         if let Ok(dll) = Self::try_load_local(model_dir) {
             return Ok(dll);
         }
 
-        // DLL not found — auto-download to model directory.
+        // DLL не найдена — качаем в папку модели.
         let target = model_dir.join("vosk.dll");
         match ensure_vosk_dll(&target) {
             Ok(path) => {
@@ -130,7 +130,7 @@ impl VoskDll {
         }
     }
 
-    /// Try to find and load VOSK DLL from local paths.
+    /// Пытается найти и загрузить VOSK DLL из локальных путей.
     fn try_load_local(model_dir: &Path) -> Result<Self, String> {
         let dll_names = ["vosk.dll", "libvosk.dll"];
 
@@ -162,9 +162,9 @@ impl VoskDll {
         Err("not found locally".into())
     }
 
-    /// Build VoskDll from an already-loaded Library.
+    /// Собирает VoskDll из уже загруженной Library.
     fn from_library(lib: Library) -> Result<Self, String> {
-        // SAFETY: We load symbols by their exact C names from the VOSK API.
+        // БЕЗОПАСНОСТЬ: Грузим символы по их точным C-именам из VOSK API.
         let model_new: unsafe extern "C" fn(*const c_char) -> *mut VoskModel = {
             let sym: Symbol<unsafe extern "C" fn(*const c_char) -> *mut VoskModel> = unsafe {
                 lib.get(b"vosk_model_new\0")
@@ -254,8 +254,8 @@ impl VoskDll {
         })
     }
 
-    /// Load a VOSK model from the given directory path.
-    /// The directory should contain the model files (conf/, ivector/, etc.).
+    /// Загружает VOSK-модель из указанной папки.
+    /// В папке должны быть файлы модели (conf/, ivector/ и т.д.).
     pub unsafe fn load_model(&self, model_dir: &str) -> Result<*mut VoskModel, String> {
         let c_path = CString::new(model_dir)
             .map_err(|e| format!("Invalid model path: {e}"))?;
@@ -270,16 +270,16 @@ impl VoskDll {
         Ok(model)
     }
 
-    /// Free a VOSK model.
+    /// Освобождает VOSK-модель.
     pub unsafe fn free_model(&self, model: *mut VoskModel) {
         if !model.is_null() {
             (self.model_free)(model);
         }
     }
 
-    /// Create a recognizer from a loaded model.
-    /// sample_rate: typically 16000.0 for 16kHz audio.
-    /// Also configures SetWords(true) and SetMaxAlternatives(0) for best accuracy.
+    /// Создаёт распознаватель из загруженной модели.
+    /// sample_rate: обычно 16000.0 для 16 кГц звука.
+    /// Также настраивает SetWords(true) и SetMaxAlternatives(0) для лучшей точности.
     pub unsafe fn create_recognizer(
         &self,
         model: *mut VoskModel,
@@ -289,17 +289,17 @@ impl VoskDll {
         if rec.is_null() {
             return Err("vosk_recognizer_new returned NULL".into());
         }
-        // Enable word-level timing info — improves recognition quality.
+        // Включаем информацию о таймингах слов — улучшает качество распознавания.
         (self.recognizer_set_words)(rec, 1);
-        // Disable alternative hypotheses — single best result only.
+        // Отключаем альтернативные гипотезы — только один лучший результат.
         (self.recognizer_set_max_alternatives)(rec, 0);
         Ok(rec)
     }
 
-    /// Feed audio samples to the recognizer.
-    /// `samples` must be 16-bit signed integer PCM, mono, at the sample rate
-    /// specified when creating the recognizer.
-    /// Returns 1 if the recognizer has enough data to produce a result, 0 otherwise.
+    /// Скармливает звуковые образцы распознавателю.
+    /// `samples` — 16-битный знаковый PCM, моно, с частотой дискретизации,
+    /// указанной при создании распознавателя.
+    /// Возвращает 1 если данных достаточно для результата, иначе 0.
     pub unsafe fn accept_waveform(
         &self,
         rec: *mut VoskRecognizer,
@@ -308,9 +308,9 @@ impl VoskDll {
         (self.recognizer_accept_waveform)(rec, samples.as_ptr(), samples.len() as c_int)
     }
 
-    /// Get the final recognition result as a JSON string.
-    /// Call after `accept_waveform` returns 1.
-    /// The returned string is owned by the recognizer — copy it immediately.
+    /// Забирает финальный результат распознавания как JSON-строку.
+    /// Вызывать после того, как `accept_waveform` вернул 1.
+    /// Строка принадлежит распознавателю — копируем сразу.
     pub unsafe fn result(&self, rec: *mut VoskRecognizer) -> String {
         let ptr = (self.recognizer_result)(rec);
         if ptr.is_null() {
@@ -319,7 +319,7 @@ impl VoskDll {
         CStr::from_ptr(ptr).to_string_lossy().into_owned()
     }
 
-    /// Free a recognizer.
+    /// Освобождает распознаватель.
     pub unsafe fn free_recognizer(&self, rec: *mut VoskRecognizer) {
         if !rec.is_null() {
             (self.recognizer_free)(rec);
@@ -327,22 +327,22 @@ impl VoskDll {
     }
 }
 
-/// Download VOSK DLL from GitHub releases if not present.
-/// Returns the path to the downloaded DLL.
+/// Качает VOSK DLL с GitHub Releases, если её нет.
+/// Возвращает путь к скачанной DLL.
 fn ensure_vosk_dll(target: &Path) -> Result<PathBuf, String> {
     if target.exists() {
         return Ok(target.to_path_buf());
     }
 
-    // VOSK releases: https://github.com/alphacep/vosk-api/releases
-    // We use a known-good release tag. The zip contains vosk.dll + dependencies.
+    // Релизы VOSK: https://github.com/alphacep/vosk-api/releases
+    // Используем проверенный тег. В zip лежит vosk.dll + зависимости.
     let release_tag = "v0.3.45";
     let asset = "vosk-win64-0.3.45.zip";
     let url = format!(
         "https://github.com/alphacep/vosk-api/releases/download/{release_tag}/{asset}"
     );
 
-    // Download to a temp file.
+    // Качаем во временный файл.
     let tmp_zip = target.with_extension("zip.tmp");
     eprintln!("[VOSK] Downloading {url} ...");
     let response = reqwest::blocking::get(&url)
@@ -353,7 +353,7 @@ fn ensure_vosk_dll(target: &Path) -> Result<PathBuf, String> {
     std::fs::write(&tmp_zip, &bytes)
         .map_err(|e| format!("Write temp zip failed: {e}"))?;
 
-    // Extract vosk.dll from the zip.
+    // Извлекаем vosk.dll из архива.
     eprintln!("[VOSK] Extracting vosk.dll ...");
     let file = std::fs::File::open(&tmp_zip)
         .map_err(|e| format!("Open zip failed: {e}"))?;
@@ -369,7 +369,7 @@ fn ensure_vosk_dll(target: &Path) -> Result<PathBuf, String> {
             .map_err(|e| format!("Zip entry {i}: {e}"))?;
         let name = entry.name().to_lowercase();
 
-        // Extract vosk.dll / libvosk.dll and its dependencies.
+        // Извлекаем vosk.dll / libvosk.dll и их зависимости.
         if name.ends_with(".dll") {
             let fname = Path::new(entry.name())
                 .file_name()
@@ -391,7 +391,7 @@ fn ensure_vosk_dll(target: &Path) -> Result<PathBuf, String> {
         }
     }
 
-    // Clean up temp zip.
+    // Подчищаем временный zip.
     let _ = std::fs::remove_file(&tmp_zip);
 
     match found_dll {

@@ -7,20 +7,20 @@ use crossbeam_channel::{Receiver, Sender};
 
 use crate::core::helpers::whisper_dir;
 
-/// События прогресса автоскачивания whisper.
+/// События прогресса при автоскачивании whisper.
 #[derive(Clone, Debug)]
 pub enum SetupEvent {
-    /// Текстовый статус (что сейчас происходит).
+    /// Текстовый статус (что происходит прямо сейчас).
     Status(String),
     /// Прогресс в процентах (0..=100) для текущего файла.
     Progress(u8),
-    /// Всё готово: путь к whisper.cpp exe и путь к модели.
+    /// Готово: путь к модели.
     Done { model: PathBuf },
     /// Ошибка.
     Error(String),
 }
 
-/// Параметры скачивания модели.
+/// Какую модель качаем.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ModelKind {
     Base,
@@ -48,14 +48,14 @@ impl ModelKind {
     }
 }
 
-/// Имя бинарника whisper в зависимости от платформы.
-/// На Windows в новых релизах whisper.cpp бинарник называется whisper-cli.exe.
+/// Имя бинарника whisper под текущую платформу.
+/// На Windows в новых релизах whisper.cpp бинарник зовётся whisper-cli.exe.
 pub fn whisper_exe_name() -> &'static str {
     if cfg!(windows) { "whisper-cli.exe" } else { "whisper-cli" }
 }
 
-/// Запускает процесс установки whisper в отдельном потоке.
-/// Возвращает handle потока и rx событий.
+/// Запускает установку whisper в отдельном потоке.
+/// Возвращает ручку потока и приёмник событий.
 pub fn spawn_setup(model: ModelKind) -> (JoinHandle<()>, Receiver<SetupEvent>) {
     let (tx, rx) = crossbeam_channel::unbounded::<SetupEvent>();
     let handle = thread::Builder::new()
@@ -73,11 +73,11 @@ fn run_setup(tx: &Sender<SetupEvent>, model: ModelKind) -> Result<(), anyhow::Er
     let dir = whisper_dir();
     fs::create_dir_all(&dir)?;
 
-    // 1. Бинарник whisper.cpp
+    // 1. Бинарник whisper.cpp.
     let _ = tx.send(SetupEvent::Status("Проверка whisper.cpp...".into()));
     let _ = ensure_whisper_exe(tx, &dir)?;
 
-    // 2. Модель
+    // 2. Модель.
     let _ = tx.send(SetupEvent::Status(format!(
         "Проверка модели ({})...",
         model.file_name()
@@ -98,7 +98,7 @@ fn ensure_whisper_exe(tx: &Sender<SetupEvent>, dir: &Path) -> Result<PathBuf, an
 
     let _ = tx.send(SetupEvent::Status("Скачивание whisper.cpp...".into()));
 
-    // Определяем имя ассета под платформу.
+    // Имя ассета под платформу.
     let asset_name = if cfg!(windows) {
         "whisper-bin-x64.zip".to_string()
     } else if cfg!(target_os = "macos") {
@@ -130,7 +130,7 @@ fn ensure_whisper_exe(tx: &Sender<SetupEvent>, dir: &Path) -> Result<PathBuf, an
         ));
     }
 
-    // На unix даём права на исполнение.
+    // На unix выдаём права на исполнение.
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -151,12 +151,12 @@ fn ensure_model(
 ) -> Result<PathBuf, anyhow::Error> {
     let path = dir.join(model.file_name());
 
-    // Если модель уже есть — возвращаем.
+    // Модель уже есть — выходим.
     if path.is_file() {
         return Ok(path);
     }
 
-    // Удаляем старые модели перед скачиванием новой.
+    // Чистим старые модели перед скачкой новой.
     let _ = tx.send(SetupEvent::Status(
         "Удаление старых моделей...".into(),
     ));
@@ -175,7 +175,7 @@ fn ensure_model(
     )));
     download_with_progress(tx, model.url(), &path)?;
 
-    // Обновляем путь в конфиге
+    // Обновляем путь в конфиге.
     let _ = tx.send(SetupEvent::Status("Модель загружена".into()));
     Ok(path)
 }
@@ -224,8 +224,8 @@ fn download_with_progress(
     Ok(())
 }
 
-/// Распаковывает ВСЕ файлы из zip-архива в dest_dir, выравнивая структуру
-/// (убирает вложенные папки вроде Release/ — все файлы кладутся напрямую в dest_dir).
+/// Распаковывает ВСЕ файлы из zip в dest_dir, выравнивая структуру
+/// (вложенные папки типа Release/ убираются — всё кладётся прямо в dest_dir).
 fn extract_zip_all(archive: &Path, dest_dir: &Path) -> Result<(), anyhow::Error> {
     let file = fs::File::open(archive)?;
     let mut archive = zip::ZipArchive::new(file)?;
@@ -238,7 +238,7 @@ fn extract_zip_all(archive: &Path, dest_dir: &Path) -> Result<(), anyhow::Error>
             None => continue,
         };
 
-        // Пропускаем директории.
+        // Папки пропускаем.
         if entry.is_dir() {
             continue;
         }
@@ -249,7 +249,7 @@ fn extract_zip_all(archive: &Path, dest_dir: &Path) -> Result<(), anyhow::Error>
     Ok(())
 }
 
-/// Распаковывает tar.gz архив (для Linux).
+/// Распаковывает tar.gz (для Linux).
 fn extract_tar_gz_all(archive: &Path, dest_dir: &Path) -> Result<(), anyhow::Error> {
     use std::process::Command;
     fs::create_dir_all(dest_dir)?;
@@ -270,7 +270,7 @@ fn extract_tar_gz_all(archive: &Path, dest_dir: &Path) -> Result<(), anyhow::Err
     Ok(())
 }
 
-/// Проверяет, доступен ли whisper.dll и хотя бы одна модель.
+/// Проверяет, есть ли whisper.dll и хотя бы одна модель.
 pub fn is_ready() -> bool {
     let dir = whisper_dir();
     let dll = dir.join("whisper.dll");
